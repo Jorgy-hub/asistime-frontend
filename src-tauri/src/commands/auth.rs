@@ -2,7 +2,7 @@
 pub async fn login(username: String, password: String) -> Result<String, String> {
     let client = reqwest::Client::new();
     let response = client
-        .post("http://localhost:1420/auth/login")
+        .post("http://172.16.0.110:1420/auth/login")
         .json(&serde_json::json!({
             "username": username,
             "password": password
@@ -35,7 +35,7 @@ pub async fn login(username: String, password: String) -> Result<String, String>
 pub async fn get_user(auth_token: &str) -> Result<serde_json::Value, String> {
     let client = reqwest::Client::new();
     let response = client
-        .get("http://localhost:1420/auth/profile")
+        .get("http://172.16.0.110:1420/auth/profile")
         .bearer_auth(auth_token)
         .send()
         .await

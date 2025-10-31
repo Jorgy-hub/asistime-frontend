@@ -11,7 +11,7 @@ pub async fn students_count_currently_inside() -> Result<usize, String> {
         .map_err(|e| e.to_string())?;
 
     let resp = client
-        .get("http://localhost:1420/students/countCurrentlyInside")
+        .get("http://172.16.0.110:1420/students/countCurrentlyInside")
         .send()
         .await
         .map_err(|e| format!("Network error: {e}"))?
@@ -36,7 +36,7 @@ pub async fn students_count_currently_outside() -> Result<usize, String> {
         .build()
         .map_err(|e| e.to_string())?;   
     let resp = client
-        .get("http://localhost:1420/students/countCurrentlyOutside")
+        .get("http://172.16.0.110:1420/students/countCurrentlyOutside")
         .send()
         .await
         .map_err(|e| format!("Network error: {e}"))?
@@ -60,7 +60,7 @@ pub async fn students_count_total() -> Result<usize, String> {
         .map_err(|e| e.to_string())?;
 
     let resp = client
-        .get("http://localhost:1420/students/countTotalStudents")
+        .get("http://172.16.0.110:1420/students/countTotalStudents")
         .send()
         .await
         .map_err(|e| format!("Network error: {e}"))?
@@ -86,7 +86,7 @@ pub async fn students_count_new() -> Result<usize, String> {
         .map_err(|e| e.to_string())?;
 
     let resp = client
-        .get("http://localhost:1420/students/countNewStudents")
+        .get("http://172.16.0.110:1420/students/countNewStudents")
         .send()
         .await
         .map_err(|e| format!("Network error: {e}"))?
@@ -197,7 +197,7 @@ pub async fn students_filter(
     });
 
     let resp = client
-        .post("http://localhost:1420/graphql")
+        .post("http://172.16.0.110:1420/graphql")
         .json(&json!({ "query": query, "variables": variables }))
         .send()
         .await
@@ -259,7 +259,7 @@ pub async fn student_detail(id: String) -> Result<Student, String> {
     let variables = json!({ "id": id });
 
     let resp = client
-        .post("http://localhost:1420/graphql")
+        .post("http://172.16.0.110:1420/graphql")
         .json(&json!({ "query": query, "variables": variables }))
         .send()
         .await

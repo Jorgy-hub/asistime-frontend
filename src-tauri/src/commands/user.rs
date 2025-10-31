@@ -14,7 +14,7 @@ pub struct User {
 pub async fn list_users() -> Result<Vec<User>, String> {
     let client = reqwest::Client::new();
     let response = client
-        .get("http://localhost:1420/user/all")
+        .get("http://172.16.0.110:1420/user/all")
         .send()
         .await
         .map_err(|e| format!("Failed to send request: {}", e))?;           
@@ -27,7 +27,7 @@ pub async fn list_users() -> Result<Vec<User>, String> {
 pub async fn create_user(user: User) -> Result<(), String> {
     let client = reqwest::Client::new();
     let response = client
-        .post("http://localhost:1420/auth/register")
+        .post("http://172.16.0.110:1420/auth/register")
         .json(&user)
         .send()
         .await
@@ -44,7 +44,7 @@ pub async fn create_user(user: User) -> Result<(), String> {
 pub async fn update_user(user: User) -> Result<(), String> {
     let client = reqwest::Client::new();
     let response = client
-        .post("http://localhost:1420/auth/update")
+        .post("http://172.16.0.110:1420/auth/update")
         .json(&user)
         .send()
         .await
@@ -61,7 +61,7 @@ pub async fn update_user(user: User) -> Result<(), String> {
 pub async fn delete_user(username: String) -> Result<(), String> {
     let client = reqwest::Client::new();
     let response = client
-        .post("http://localhost:1420/auth/delete")
+        .post("http://172.16.0.110:1420/auth/delete")
         .json(&json!({ "username": username }))
         .send()
         .await
