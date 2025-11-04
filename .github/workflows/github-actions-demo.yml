@@ -1,4 +1,4 @@
-name: Tauri Release (macOS, Windows, Linux)
+name: Tauri Release (macOS, Windows)
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -24,20 +24,6 @@ jobs:
           node-version: 20
           cache: npm
 
-      # Linux-only system deps for WebKitGTK/GTK
-      - name: Install Linux build deps
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            pkg-config
-          sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
-
-      # Cross-platform: use npm ci if lockfile exists, else npm install
       - name: Install deps (npm ci)
         if: ${{ hashFiles('package-lock.json') != '' }}
         run: npm ci
@@ -67,5 +53,8 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # For Tauri CLI (v1/v2) compatibility:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
