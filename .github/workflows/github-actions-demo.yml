@@ -20,15 +20,16 @@ jobs:
           node-version: 20
           cache: npm
 
+      # If you don't have a package-lock.json, replace with: npm install
       - run: npm ci
       - run: npm run build
 
       - uses: dtolnay/rust-toolchain@stable
 
-      # Builds, signs, and uploads installers + latest.json to a GitHub Release
       - uses: tauri-apps/tauri-action@v0
         with:
-          tauriScript: npm run tauri:build
+          # Let the action append "build" (results in: npx tauri build)
+          tauriScript: npx tauri
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}
           releaseBody: "Automated Tauri release"
