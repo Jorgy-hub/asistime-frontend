@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "asistime",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "identifier": "com.asistime.app",
   "build": {
     "frontendDist": "../out",
@@ -26,7 +26,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["dmg", "msi", "deb", "nsis"],
+    "targets": ["dmg", "msi", "nsis"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -41,6 +41,7 @@
       "requireLiteralLeadingDot": false
     },
     "updater": {
+      "active": true,
       "endpoints": [
         "https://github.com/Jorgy-Hub/asistime-frontend/releases/latest/download/latest-windows.json",
         "https://github.com/Jorgy-Hub/asistime-frontend/releases/latest/download/latest-macos.json"
