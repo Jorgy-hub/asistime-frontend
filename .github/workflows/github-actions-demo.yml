@@ -24,6 +24,7 @@ jobs:
           node-version: 20
           cache: npm
 
+      # Install deps
       - name: Install deps (npm ci)
         if: ${{ hashFiles('package-lock.json') != '' }}
         run: npm ci
@@ -32,9 +33,11 @@ jobs:
         if: ${{ hashFiles('package-lock.json') == '' }}
         run: npm install
 
+      # Build Next.js (produces /out with output: "export")
       - name: Build web app
         run: npm run build
 
+      # Rust toolchain and cache
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust build
@@ -42,6 +45,7 @@ jobs:
         with:
           workspaces: src-tauri -> target
 
+      # Build and publish installers + default latest.json
       - name: Tauri build and release
         uses: tauri-apps/tauri-action@v0
         with:
@@ -54,35 +58,49 @@ jobs:
           macOSUniversal: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Required: private key (multiline) used for signing updater artifacts
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          # Only include the PASSWORD envs if your key is encrypted:
+          # If your key is password-protected, uncomment both lines below and set the secret:
           # TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
-      # Rename and upload platform-specific latest.json
+      # Prepare and upload platform-specific latest.json (macOS)
       - name: Prepare latest.json (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          LATEST=$(find src-tauri/target/release/bundle -name latest.json | head -n1)
-          echo "Found: $LATEST"
+          set -e
+          LATEST=$(find src-tauri/target -type f -name latest.json | head -n1)
+          echo "Found: ${LATEST:-<none>}"
+          if [ -z "$LATEST" ]; then
+            echo "latest.json not found"; exit 1
+          fi
           cp "$LATEST" latest-macos.json
 
+      - name: Upload latest-macos.json
+        if: matrix.os == 'macos-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: latest-macos.json
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Prepare and upload platform-specific latest.json (Windows)
       - name: Prepare latest.json (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $latest = Get-ChildItem -Path src-tauri\target\release\bundle -Filter latest.json -Recurse | Select-Object -First 1
+          $latest = Get-ChildItem src-tauri\target -Recurse -File -Filter latest.json | Select-Object -First 1
+          if (-not $latest) { throw "latest.json not found" }
           Write-Host "Found: $($latest.FullName)"
           Copy-Item $latest.FullName latest-windows.json
 
-      - name: Upload platform latest.json to release
-        if: ${{ (matrix.os == 'macos-latest' && hashFiles('latest-macos.json') != '') || (matrix.os == 'windows-latest' && hashFiles('latest-windows.json') != '') }}
+      - name: Upload latest-windows.json
+        if: matrix.os == 'windows-latest'
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            latest-macos.json
-            latest-windows.json
+          files: latest-windows.json
           tag_name: ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
