@@ -1,0 +1,4 @@
+error: failed to open: /Users/jorgypzk/asistime/src-tauri/target/debug/.cargo-lock
+
+Caused by:
+  Permission denied (os error 13)
