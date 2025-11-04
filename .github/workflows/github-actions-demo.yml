@@ -54,8 +54,35 @@ jobs:
           macOSUniversal: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # For Tauri CLI (v1/v2) compatibility:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          # Only include the PASSWORD envs if your key is encrypted:
+          # TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+
+      # Rename and upload platform-specific latest.json
+      - name: Prepare latest.json (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          LATEST=$(find src-tauri/target/release/bundle -name latest.json | head -n1)
+          echo "Found: $LATEST"
+          cp "$LATEST" latest-macos.json
+
+      - name: Prepare latest.json (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $latest = Get-ChildItem -Path src-tauri\target\release\bundle -Filter latest.json -Recurse | Select-Object -First 1
+          Write-Host "Found: $($latest.FullName)"
+          Copy-Item $latest.FullName latest-windows.json
+
+      - name: Upload platform latest.json to release
+        if: ${{ (matrix.os == 'macos-latest' && hashFiles('latest-macos.json') != '') || (matrix.os == 'windows-latest' && hashFiles('latest-windows.json') != '') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            latest-macos.json
+            latest-windows.json
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
