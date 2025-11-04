@@ -24,7 +24,7 @@ jobs:
           node-version: 20
           cache: npm
 
-      # Linux-only: system dependencies for WebKitGTK/GTK
+      # Linux-only system deps for WebKitGTK/GTK
       - name: Install Linux build deps
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -35,16 +35,16 @@ jobs:
             librsvg2-dev \
             patchelf \
             pkg-config
-          # WebKitGTK (try 4.1, fallback to 4.0)
           sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
 
-      - name: Install Node deps (npm ci if lockfile exists)
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+      # Cross-platform: use npm ci if lockfile exists, else npm install
+      - name: Install deps (npm ci)
+        if: ${{ hashFiles('package-lock.json') != '' }}
+        run: npm ci
+
+      - name: Install deps (npm install)
+        if: ${{ hashFiles('package-lock.json') == '' }}
+        run: npm install
 
       - name: Build web app
         run: npm run build
@@ -56,11 +56,9 @@ jobs:
         with:
           workspaces: src-tauri -> target
 
-      # Builds, signs, and publishes installers + latest.json to a GitHub Release
       - name: Tauri build and release
         uses: tauri-apps/tauri-action@v0
         with:
-          # The action will append "build" -> executes: npx tauri build
           tauriScript: npx tauri
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}
