@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::time::Duration;
 use serde_json::Value;
-
+use std::time::Duration;
 
 #[tauri::command]
 pub async fn students_count_currently_inside() -> Result<usize, String> {
@@ -34,17 +33,17 @@ pub async fn students_count_currently_inside() -> Result<usize, String> {
 pub async fn students_count_currently_outside() -> Result<usize, String> {
     let client = reqwest::Client::builder()
         .build()
-        .map_err(|e| e.to_string())?;   
+        .map_err(|e| e.to_string())?;
     let resp = client
         .get("http://172.16.0.110:1420/students/countCurrentlyOutside")
         .send()
         .await
         .map_err(|e| format!("Network error: {e}"))?
         .error_for_status()
-        .map_err(|e| format!("HTTP error: {e}"))?; 
-    
+        .map_err(|e| format!("HTTP error: {e}"))?;
+
     // Read once, then try JSON number or plain text number.
-    let bytes = resp.bytes().await.map_err(|e| e.to_string())?; 
+    let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
     if let Ok(n) = serde_json::from_slice::<usize>(&bytes) {
         return Ok(n);
     }
@@ -217,7 +216,6 @@ pub async fn students_filter(
     Ok(gql.data.students_filter)
 }
 
-
 #[derive(Deserialize)]
 struct StudentByIdData {
     student: Option<Student>,
@@ -229,7 +227,6 @@ struct GqlRespStudent {
     #[serde(default)]
     errors: Option<Vec<GqlError>>,
 }
-
 
 #[tauri::command]
 pub async fn student_detail(id: String) -> Result<Student, String> {
@@ -266,7 +263,10 @@ pub async fn student_detail(id: String) -> Result<Student, String> {
         .map_err(|e| format!("Network error: {e}"))?;
 
     let status = resp.status();
-    let body = resp.text().await.map_err(|e| format!("Read body error: {e}"))?;
+    let body = resp
+        .text()
+        .await
+        .map_err(|e| format!("Read body error: {e}"))?;
     println!("[student_detail] HTTP {} body: {}", status, body);
 
     if !status.is_success() {
@@ -282,14 +282,18 @@ pub async fn student_detail(id: String) -> Result<Student, String> {
                     .filter_map(|e| e.get("message").and_then(|m| m.as_str()))
                     .collect::<Vec<_>>()
                     .join(" | ");
-                return Err(if msg.is_empty() { "GraphQL error".into() } else { msg });
+                return Err(if msg.is_empty() {
+                    "GraphQL error".into()
+                } else {
+                    msg
+                });
             }
         }
     }
 
     // Parse typed data
-    let gql: GqlRespStudent = serde_json::from_str(&body)
-        .map_err(|e| format!("Invalid JSON: {e}: {body}"))?;
+    let gql: GqlRespStudent =
+        serde_json::from_str(&body).map_err(|e| format!("Invalid JSON: {e}: {body}"))?;
     match gql.data.student {
         Some(s) => Ok(s),
         None => Err("Student not found".to_string()),

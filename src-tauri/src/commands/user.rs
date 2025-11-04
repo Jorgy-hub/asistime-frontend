@@ -17,9 +17,12 @@ pub async fn list_users() -> Result<Vec<User>, String> {
         .get("http://172.16.0.110:1420/user/all")
         .send()
         .await
-        .map_err(|e| format!("Failed to send request: {}", e))?;           
-    let users = response.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
-    
+        .map_err(|e| format!("Failed to send request: {}", e))?;
+    let users = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
     Ok(users)
 }
 
@@ -32,11 +35,14 @@ pub async fn create_user(user: User) -> Result<(), String> {
         .send()
         .await
         .map_err(|e| format!("Failed to send request: {}", e))?;
-    
+
     if response.status().is_success() {
         Ok(())
     } else {
-        Err(format!("Failed to create user: {}", response.text().await.unwrap_or_default()))
+        Err(format!(
+            "Failed to create user: {}",
+            response.text().await.unwrap_or_default()
+        ))
     }
 }
 
@@ -49,11 +55,14 @@ pub async fn update_user(user: User) -> Result<(), String> {
         .send()
         .await
         .map_err(|e| format!("Failed to send request: {}", e))?;
-    
+
     if response.status().is_success() {
         Ok(())
     } else {
-        Err(format!("Failed to update user: {}", response.text().await.unwrap_or_default()))
+        Err(format!(
+            "Failed to update user: {}",
+            response.text().await.unwrap_or_default()
+        ))
     }
 }
 
@@ -69,6 +78,9 @@ pub async fn delete_user(username: String) -> Result<(), String> {
     if response.status().is_success() {
         Ok(())
     } else {
-        Err(format!("Failed to delete user: {}", response.text().await.unwrap_or_default()))
+        Err(format!(
+            "Failed to delete user: {}",
+            response.text().await.unwrap_or_default()
+        ))
     }
 }
