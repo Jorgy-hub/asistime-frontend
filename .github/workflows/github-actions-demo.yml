@@ -42,6 +42,7 @@ jobs:
         with:
           workspaces: src-tauri -> target
 
+      # Build and publish installers + default latest.json (if generated)
       - name: Tauri build and release
         uses: tauri-apps/tauri-action@v0
         with:
@@ -56,27 +57,75 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          # Only if your key has a password:
+          # Uncomment only if your private key is password-protected:
           # TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
-      # Download the default latest.json that tauri-action just uploaded,
-      # rename per-OS, and upload back to the same release.
-      - name: Prepare + upload latest-macos.json
-        if: matrix.os == 'macos-latest'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release download "${{ github.ref_name }}" -p latest.json -D .
-          mv latest.json latest-macos.json
-          gh release upload "${{ github.ref_name }}" latest-macos.json --clobber
-
+      # WINDOWS: rename tauri's latest.json -> latest-windows.json (if present), upload to release
       - name: Prepare + upload latest-windows.json
         if: matrix.os == 'windows-latest'
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download "${{ github.ref_name }}" -p latest.json -D .
-          Rename-Item latest.json latest-windows.json
-          gh release upload "${{ github.ref_name }}" latest-windows.json --clobber
+          try {
+            gh release download "${{ github.ref_name }}" -p latest.json -D .
+            Rename-Item latest.json latest-windows.json
+            gh release upload "${{ github.ref_name }}" latest-windows.json --clobber
+          } catch {
+            Write-Host "No latest.json from tauri-action; skipping windows json."
+          }
+
+      # macOS: build latest-macos.json from produced DMG + .sig and upload
+      - name: Generate + upload latest-macos.json
+        if: matrix.os == 'macos-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # Find a DMG from the build (universal or arch-specific)
+          DMG_PATH="$(find src-tauri/target -type f -name '*.dmg' | head -n1 || true)"
+          if [ -z "${DMG_PATH}" ]; then
+            echo "No DMG found in target; cannot create latest-macos.json"; exit 1
+          fi
+          DMG_NAME="$(basename "$DMG_PATH")"
+          SIG_PATH="${DMG_PATH}.sig"
+          if [ ! -f "$SIG_PATH" ]; then
+            # Fallback: search for matching .sig anywhere
+            SIG_PATH="$(find src-tauri/target -type f -name "${DMG_NAME}.sig" | head -n1 || true)"
+          fi
+          if [ -z "${SIG_PATH}" ] || [ ! -f "${SIG_PATH}" ]; then
+            echo "Signature file not found for $DMG_NAME"; exit 1
+          fi
+
+          VERSION="${TAG#v}"
+          PUB_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          URL="https://github.com/${REPO}/releases/download/${TAG}/${DMG_NAME}"
+          SIG_CONTENT="$(cat "${SIG_PATH}")"
+
+          # Create a macOS-specific updater JSON that works for both Intel and Apple Silicon (universal DMG)
+          cat > latest-macos.json <<JSON
+          {
+            "version": "${VERSION}",
+            "notes": "Automated Tauri release",
+            "pub_date": "${PUB_DATE}",
+            "platforms": {
+              "darwin-x86_64": {
+                "signature": ${SIG_CONTENT@Q},
+                "url": "${URL}"
+              },
+              "darwin-aarch64": {
+                "signature": ${SIG_CONTENT@Q},
+                "url": "${URL}"
+              }
+            }
+          }
+          JSON
+
+          echo "latest-macos.json:"
+          cat latest-macos.json
+
+          gh release upload "${TAG}" latest-macos.json --clobber
