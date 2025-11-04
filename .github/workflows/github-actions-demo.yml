@@ -6,12 +6,16 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -20,15 +24,43 @@ jobs:
           node-version: 20
           cache: npm
 
-      # If you don't have a package-lock.json, replace with: npm install
-      - run: npm ci
-      - run: npm run build
+      # Linux-only: system dependencies for WebKitGTK/GTK
+      - name: Install Linux build deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            pkg-config
+          # WebKitGTK (try 4.1, fallback to 4.0)
+          sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
+
+      - name: Install Node deps (npm ci if lockfile exists)
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Build web app
+        run: npm run build
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
         with:
-          # Let the action append "build" (results in: npx tauri build)
+          workspaces: src-tauri -> target
+
+      # Builds, signs, and publishes installers + latest.json to a GitHub Release
+      - name: Tauri build and release
+        uses: tauri-apps/tauri-action@v0
+        with:
+          # The action will append "build" -> executes: npx tauri build
           tauriScript: npx tauri
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}
