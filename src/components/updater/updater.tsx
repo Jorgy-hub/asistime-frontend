@@ -10,19 +10,23 @@ export default function Updater() {
   const [totalBytes, setTotalBytes] = useState<number | undefined>();
   const [downloadedBytes, setDownloadedBytes] = useState(0);
 
+// ...existing code...
   useEffect(() => {
     const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+    console.log("[Updater] mounted, isTauri:", isTauri);
     if (!isTauri) return;
 
     (async () => {
       try {
+        console.log("[Updater] checking…");
         const u = await check();
+        console.log("[Updater] result:", u);
         if (u && u.available) {
           setUpdate(u);
-          setTimeout(() => setShow(true), 50); // animate in
+          setTimeout(() => setShow(true), 50);
         }
-      } catch {
-        // ignore
+      } catch (e) {
+        console.error("[Updater] check error:", e);
       }
     })();
   }, []);

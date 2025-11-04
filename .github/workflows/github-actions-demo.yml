@@ -51,6 +51,7 @@ jobs:
           releaseBody: "Automated Tauri release"
           includeDebug: false
           prerelease: false
+          macOSUniversal: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # For Tauri CLI (v1/v2) compatibility:
