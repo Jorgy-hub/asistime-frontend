@@ -42,7 +42,6 @@ jobs:
         with:
           workspaces: src-tauri -> target
 
-      # Build and publish installers + default latest.json (if generated)
       - name: Tauri build and release
         uses: tauri-apps/tauri-action@v0
         with:
@@ -57,11 +56,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          # Uncomment only if your private key is password-protected:
+          # Uncomment only if your key is password-protected:
           # TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
-      # WINDOWS: rename tauri's latest.json -> latest-windows.json (if present), upload to release
+      # WINDOWS: prefer tauri's latest.json -> latest-windows.json; fallback to building from assets
       - name: Prepare + upload latest-windows.json
         if: matrix.os == 'windows-latest'
         shell: pwsh
@@ -73,10 +72,30 @@ jobs:
             Rename-Item latest.json latest-windows.json
             gh release upload "${{ github.ref_name }}" latest-windows.json --clobber
           } catch {
-            Write-Host "No latest.json from tauri-action; skipping windows json."
+            Write-Host "No latest.json; generating from assets..."
+            gh release download "${{ github.ref_name }}" -p "*_x64_en-US_windows.msi" -D .
+            gh release download "${{ github.ref_name }}" -p "*_x64_en-US_windows.msi.sig" -D . -R
+            $msi = Get-ChildItem *.msi | Select-Object -First 1
+            if (-not $msi) { throw "MSI not found in release assets" }
+            $sig = "$($msi.Name).sig"
+            if (-not (Test-Path $sig)) { throw "Signature not found for $($msi.Name)" }
+            $sigContent = Get-Content $sig -Raw
+            $version = "${{ github.ref_name }}".Substring(1)
+            $url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${($msi.Name)}"
+            $json = @{
+              version = $version
+              notes = "Automated Tauri release"
+              pub_date = (Get-Date).ToUniversalTime().ToString("s") + "Z"
+              platforms = @{
+                "windows-x86_64" = @{ signature = $sigContent; url = $url }
+                "windows-x86_64-msi" = @{ signature = $sigContent; url = $url }
+              }
+            } | ConvertTo-Json -Depth 6
+            $json | Out-File latest-windows.json -Encoding utf8
+            gh release upload "${{ github.ref_name }}" latest-windows.json --clobber
           }
 
-      # macOS: build latest-macos.json from produced DMG + .sig and upload
+      # macOS: download DMG + .sig from the release, then generate latest-macos.json
       - name: Generate + upload latest-macos.json
         if: matrix.os == 'macos-latest'
         env:
@@ -85,47 +104,30 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-
-          # Find a DMG from the build (universal or arch-specific)
-          DMG_PATH="$(find src-tauri/target -type f -name '*.dmg' | head -n1 || true)"
-          if [ -z "${DMG_PATH}" ]; then
-            echo "No DMG found in target; cannot create latest-macos.json"; exit 1
+          gh release download "${TAG}" -p "*.dmg" -D .
+          gh release download "${TAG}" -p "*.dmg.sig" -D . || true
+          DMG="$(ls *.dmg | head -n1 || true)"
+          if [ -z "${DMG}" ]; then echo "No DMG asset on release"; exit 1; fi
+          SIG_FILE="${DMG}.sig"
+          if [ ! -f "${SIG_FILE}" ]; then
+            SIG_FILE="$(ls *.dmg.sig | head -n1 || true)"
           fi
-          DMG_NAME="$(basename "$DMG_PATH")"
-          SIG_PATH="${DMG_PATH}.sig"
-          if [ ! -f "$SIG_PATH" ]; then
-            # Fallback: search for matching .sig anywhere
-            SIG_PATH="$(find src-tauri/target -type f -name "${DMG_NAME}.sig" | head -n1 || true)"
+          if [ -z "${SIG_FILE}" ] || [ ! -f "${SIG_FILE}" ]; then
+            echo "Signature file not found for ${DMG}"; exit 1
           fi
-          if [ -z "${SIG_PATH}" ] || [ ! -f "${SIG_PATH}" ]; then
-            echo "Signature file not found for $DMG_NAME"; exit 1
-          fi
-
           VERSION="${TAG#v}"
           PUB_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          URL="https://github.com/${REPO}/releases/download/${TAG}/${DMG_NAME}"
-          SIG_CONTENT="$(cat "${SIG_PATH}")"
-
-          # Create a macOS-specific updater JSON that works for both Intel and Apple Silicon (universal DMG)
+          URL="https://github.com/${REPO}/releases/download/${TAG}/${DMG}"
+          SIG_CONTENT="$(cat "${SIG_FILE}")"
           cat > latest-macos.json <<JSON
           {
             "version": "${VERSION}",
             "notes": "Automated Tauri release",
             "pub_date": "${PUB_DATE}",
             "platforms": {
-              "darwin-x86_64": {
-                "signature": ${SIG_CONTENT@Q},
-                "url": "${URL}"
-              },
-              "darwin-aarch64": {
-                "signature": ${SIG_CONTENT@Q},
-                "url": "${URL}"
-              }
+              "darwin-x86_64": { "signature": ${SIG_CONTENT@Q}, "url": "${URL}" },
+              "darwin-aarch64": { "signature": ${SIG_CONTENT@Q}, "url": "${URL}" }
             }
           }
           JSON
-
-          echo "latest-macos.json:"
-          cat latest-macos.json
-
           gh release upload "${TAG}" latest-macos.json --clobber
