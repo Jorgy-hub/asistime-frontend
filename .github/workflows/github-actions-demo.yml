@@ -18,17 +18,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: corepack enable && corepack prepare pnpm@9.x --activate
+          cache: npm
 
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+      - run: npm ci
+      - run: npm run build
 
       - uses: dtolnay/rust-toolchain@stable
 
       # Builds, signs, and uploads installers + latest.json to a GitHub Release
       - uses: tauri-apps/tauri-action@v0
         with:
-          tauriScript: pnpm tauri:build
+          tauriScript: npm run tauri:build
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}
           releaseBody: "Automated Tauri release"
