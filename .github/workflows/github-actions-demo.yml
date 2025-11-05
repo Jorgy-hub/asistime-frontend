@@ -57,8 +57,8 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           # Uncomment only if your private key is password-protected:
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          #TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          #TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
       # WINDOWS: download MSI/EXE from the just-created release, sign them, build latest-windows.json, upload
       - name: Prepare + upload latest-windows.json
