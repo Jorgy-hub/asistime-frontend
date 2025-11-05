@@ -2,8 +2,7 @@ name: Tauri Release (macOS, Windows)
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -51,10 +50,82 @@ jobs:
           releaseBody: "Automated Tauri release"
           includeDebug: false
           prerelease: false
+          macOSUniversal: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # For Tauri CLI (v1/v2) compatibility:
+          # Your updater key is encrypted; keep the password
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+
+      # Produce per-OS latest JSONs
+      - name: Prepare latest-windows.json
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" -p latest.json -D .
+          Rename-Item latest.json latest-windows.json
+          gh release upload "${{ github.ref_name }}" latest-windows.json --clobber
+
+      - name: Generate latest-macos.json
+        if: matrix.os == 'macos-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh release download "${TAG}" -p "*.dmg" -D .
+          DMG="$(ls *.dmg | head -n1 || true)"
+          if [ -z "${DMG}" ]; then echo "No DMG asset on release"; exit 1; fi
+
+          # Sign DMG to get updater signature (uses your encrypted key + password)
+          SIG_CONTENT="$(npx tauri signer sign "${DMG}")"
+          VERSION="${TAG#v}"
+          PUB_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          URL="https://github.com/${REPO}/releases/download/${TAG}/${DMG}"
+
+          cat > latest-macos.json <<JSON
+          {
+            "version": "${VERSION}",
+            "notes": "Automated Tauri release",
+            "pub_date": "${PUB_DATE}",
+            "platforms": {
+              "darwin-x86_64": { "signature": ${SIG_CONTENT@Q}, "url": "${URL}" },
+              "darwin-aarch64": { "signature": ${SIG_CONTENT@Q}, "url": "${URL}" }
+            }
+          }
+          JSON
+
+          gh release upload "${TAG}" latest-macos.json --clobber
+
+  merge-latest:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Merge per-OS updater JSONs into one latest.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh release download "${TAG}" -p latest-windows.json -D .
+          gh release download "${TAG}" -p latest-macos.json -D .
+
+          # Merge platforms; set version from tag and a fresh pub_date
+          VERSION="${TAG#v}"
+          PUB_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          jq -s --arg v "$VERSION" --arg d "$PUB_DATE" \
+            '{version:$v, notes:"Automated Tauri release", pub_date:$d, platforms:(.[0].platforms + .[1].platforms)}' \
+            latest-windows.json latest-macos.json > latest.json
+
+          echo "Merged latest.json:"
+          cat latest.json
+
+          gh release upload "${TAG}" latest.json --clobber

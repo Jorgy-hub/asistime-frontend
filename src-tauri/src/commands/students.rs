@@ -2,6 +2,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_json::Value;
 use std::time::Duration;
+use once_cell::sync::Lazy;
+
+static API_BASE: Lazy<String> = Lazy::new(|| {
+    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://172.16.0.110:1420".to_string())
+});
 
 #[tauri::command]
 pub async fn students_count_currently_inside() -> Result<usize, String> {
@@ -10,7 +15,7 @@ pub async fn students_count_currently_inside() -> Result<usize, String> {
         .map_err(|e| e.to_string())?;
 
     let resp = client
-        .get("http://172.16.0.110:1420/students/countCurrentlyInside")
+        .get(format!("{}/students/countCurrentlyInside", *API_BASE))
         .send()
         .await
         .map_err(|e| format!("Network error: {e}"))?
@@ -35,7 +40,7 @@ pub async fn students_count_currently_outside() -> Result<usize, String> {
         .build()
         .map_err(|e| e.to_string())?;
     let resp = client
-        .get("http://172.16.0.110:1420/students/countCurrentlyOutside")
+        .get(format!("{}/students/countCurrentlyOutside", *API_BASE))
         .send()
         .await
         .map_err(|e| format!("Network error: {e}"))?
@@ -59,7 +64,7 @@ pub async fn students_count_total() -> Result<usize, String> {
         .map_err(|e| e.to_string())?;
 
     let resp = client
-        .get("http://172.16.0.110:1420/students/countTotalStudents")
+        .get(format!("{}/students/countTotalStudents", *API_BASE))
         .send()
         .await
         .map_err(|e| format!("Network error: {e}"))?
@@ -85,7 +90,7 @@ pub async fn students_count_new() -> Result<usize, String> {
         .map_err(|e| e.to_string())?;
 
     let resp = client
-        .get("http://172.16.0.110:1420/students/countNewStudents")
+        .get(format!("{}/students/countNewStudents", *API_BASE))
         .send()
         .await
         .map_err(|e| format!("Network error: {e}"))?
@@ -196,7 +201,7 @@ pub async fn students_filter(
     });
 
     let resp = client
-        .post("http://172.16.0.110:1420/graphql")
+        .post(format!("{}/graphql", *API_BASE))
         .json(&json!({ "query": query, "variables": variables }))
         .send()
         .await
@@ -256,7 +261,7 @@ pub async fn student_detail(id: String) -> Result<Student, String> {
     let variables = json!({ "id": id });
 
     let resp = client
-        .post("http://172.16.0.110:1420/graphql")
+        .post(format!("{}/graphql", *API_BASE))
         .json(&json!({ "query": query, "variables": variables }))
         .send()
         .await

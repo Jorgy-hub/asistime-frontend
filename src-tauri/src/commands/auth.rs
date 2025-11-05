@@ -1,8 +1,14 @@
+use once_cell::sync::Lazy;
+
+static API_BASE: Lazy<String> = Lazy::new(|| {
+    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://172.16.0.110:1420".to_string())
+});
+
 #[tauri::command]
 pub async fn login(username: String, password: String) -> Result<String, String> {
     let client = reqwest::Client::new();
     let response = client
-        .post("http://172.16.0.110:1420/auth/login")
+        .post(format!("{}/auth/login", *API_BASE))
         .json(&serde_json::json!({
             "username": username,
             "password": password
@@ -35,7 +41,7 @@ pub async fn login(username: String, password: String) -> Result<String, String>
 pub async fn get_user(auth_token: &str) -> Result<serde_json::Value, String> {
     let client = reqwest::Client::new();
     let response = client
-        .get("http://172.16.0.110:1420/auth/profile")
+        .get(format!("{}/auth/profile", *API_BASE))
         .bearer_auth(auth_token)
         .send()
         .await

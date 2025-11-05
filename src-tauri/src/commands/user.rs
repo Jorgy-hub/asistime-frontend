@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use once_cell::sync::Lazy;
+
+static API_BASE: Lazy<String> = Lazy::new(|| {
+    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://172.16.0.110:1420".to_string())
+});
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
@@ -14,7 +19,7 @@ pub struct User {
 pub async fn list_users() -> Result<Vec<User>, String> {
     let client = reqwest::Client::new();
     let response = client
-        .get("http://172.16.0.110:1420/user/all")
+        .get(format!("{}/user/all", *API_BASE))
         .send()
         .await
         .map_err(|e| format!("Failed to send request: {}", e))?;
@@ -30,7 +35,7 @@ pub async fn list_users() -> Result<Vec<User>, String> {
 pub async fn create_user(user: User) -> Result<(), String> {
     let client = reqwest::Client::new();
     let response = client
-        .post("http://172.16.0.110:1420/auth/register")
+        .post(format!("{}/auth/register", *API_BASE))
         .json(&user)
         .send()
         .await
@@ -50,7 +55,7 @@ pub async fn create_user(user: User) -> Result<(), String> {
 pub async fn update_user(user: User) -> Result<(), String> {
     let client = reqwest::Client::new();
     let response = client
-        .post("http://172.16.0.110:1420/auth/update")
+        .post(format!("{}/auth/update", *API_BASE))
         .json(&user)
         .send()
         .await
@@ -70,7 +75,7 @@ pub async fn update_user(user: User) -> Result<(), String> {
 pub async fn delete_user(username: String) -> Result<(), String> {
     let client = reqwest::Client::new();
     let response = client
-        .post("http://172.16.0.110:1420/auth/delete")
+        .post(format!("{}/auth/delete", *API_BASE))
         .json(&json!({ "username": username }))
         .send()
         .await

@@ -100,7 +100,9 @@ checksum = "b0674a1ddeecb70197781e945de4b3b8ffb61fa939a5597bcf48503737663100"
 name = "app"
 version = "0.1.8"
 dependencies = [
+ "dotenvy",
  "log",
+ "once_cell",
  "reqwest 0.11.27",
  "rust_socketio",
  "serde",
@@ -911,6 +913,12 @@ dependencies = [
  "quote",
  "syn 2.0.106",
 ]
+
+[[package]]
+name = "dotenvy"
+version = "0.15.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
 name = "downcast-rs"
