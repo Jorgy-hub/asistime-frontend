@@ -2,7 +2,8 @@ name: Tauri Release (macOS, Windows)
 
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -12,7 +13,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-13, windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -50,103 +51,7 @@ jobs:
           releaseBody: "Automated Tauri release"
           includeDebug: false
           prerelease: false
-          macOSUniversal: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-
-      # WINDOWS: sign local artifacts and create latest-windows.json
-      - name: Prepare + upload latest-windows.json
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-        run: |
-          $tag = "${{ github.ref_name }}"
-          $repo = "${{ github.repository }}"
-          $bundle = "src-tauri\target\release\bundle"
-
-          $msi = Get-ChildItem $bundle -Recurse -File -Filter *.msi | Select-Object -First 1
-          $exe = Get-ChildItem $bundle -Recurse -File -Filter *-setup*.exe | Select-Object -First 1
-          if (-not $msi -and -not $exe) { throw "No Windows installer artifacts found under $bundle" }
-
-          $version = $tag.TrimStart('v')
-          $pubDate = (Get-Date).ToUniversalTime().ToString("s") + "Z"
-          $platforms = @{}
-
-          if ($msi) {
-            $sigMsi = npx tauri signer sign "$($msi.FullName)"
-            $urlMsi = "https://github.com/$repo/releases/download/$tag/$($msi.Name)"
-            $platforms["windows-x86_64"] = @{ signature = $sigMsi; url = $urlMsi }
-            $platforms["windows-x86_64-msi"] = @{ signature = $sigMsi; url = $urlMsi }
-          }
-          if ($exe) {
-            $sigExe = npx tauri signer sign "$($exe.FullName)"
-            $urlExe = "https://github.com/$repo/releases/download/$tag/$($exe.Name)"
-            $platforms["windows-x86_64-nsis"] = @{ signature = $sigExe; url = $urlExe }
-          }
-
-          $json = @{
-            version = $version
-            notes = "Automated Tauri release"
-            pub_date = $pubDate
-            platforms = $platforms
-          } | ConvertTo-Json -Depth 10
-
-          $json | Out-File latest-windows.json -Encoding utf8
-          gh release upload $tag latest-windows.json --clobber
-
-      # macOS: sign local DMG and create latest-macos.json
-      - name: Generate + upload latest-macos.json
-        if: matrix.os == 'macos-latest'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          DMG="$(find src-tauri/target -type f -name '*.dmg' | head -n1 || true)"
-          if [ -z "${DMG}" ]; then echo "No DMG found"; exit 1; fi
-
-          SIG_CONTENT="$(npx tauri signer sign "${DMG}")"
-          VERSION="${TAG#v}"
-          PUB_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          NAME="$(basename "${DMG}")"
-          URL="https://github.com/${REPO}/releases/download/${TAG}/${NAME}"
-
-          cat > latest-macos.json <<JSON
-          {
-            "version": "${VERSION}",
-            "notes": "Automated Tauri release",
-            "pub_date": "${PUB_DATE}",
-            "platforms": {
-              "darwin-x86_64": { "signature": ${SIG_CONTENT@Q}, "url": "${URL}" },
-              "darwin-aarch64": { "signature": ${SIG_CONTENT@Q}, "url": "${URL}" }
-            }
-          }
-          JSON
-
-          gh release upload "${TAG}" latest-macos.json --clobber
-
-  merge-latest:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Merge per-OS updater JSONs into one latest.json
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          set -e
-          gh release download "$TAG" -p latest-macos.json -D .
-          gh release download "$TAG" -p latest-windows.json -D .
-          sudo apt-get update && sudo apt-get install -y jq
-          VERSION="${TAG#v}"
-          PUB_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          jq -s --arg v "$VERSION" --arg d "$PUB_DATE" \
-            '{version:$v, notes:"Automated Tauri release", pub_date:$d, platforms:(.[0].platforms + .[1].platforms)}' \
-            latest-macos.json latest-windows.json > latest.json
-          gh release upload "$TAG" latest.json --clobber
