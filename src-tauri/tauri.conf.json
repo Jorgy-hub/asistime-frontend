@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "asistime",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "identifier": "com.asistime.app",
   "build": {
     "frontendDist": "../out",
@@ -45,7 +45,7 @@
       "endpoints": [
         "https://github.com/Jorgy-Hub/asistime-frontend/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNGNDVDMkQzQkVBNTU1RTgKUldUb1ZhVyswOEpGUDM5YlRMb1l0cWZFei90N0JKK0ZMa0NvY0R3L0o1UHQxZkorekkzVnY5QXQK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU3ODk2MUE5MkQ2NTg0QzYKUldUR2hHVXRxV0dKVjRxdFFsbng5S1J5Tnd6OVhHZXR2UnRCV0RUdFdicDFEUE9hZmtYZko0eXIK"
     }
   }
 }
