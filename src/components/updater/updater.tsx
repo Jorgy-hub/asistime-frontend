@@ -3,6 +3,30 @@ import { useEffect, useState } from "react";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
+function getErrorMessage(err: unknown): string {
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object" && "message" in err && typeof (err as any).message === "string") {
+    return (err as any).message as string;
+  }
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
+
+function shouldIgnore(err: unknown): boolean {
+  const m = getErrorMessage(err).toLowerCase();
+  // Missing platform entry in latest.json
+  if (m.includes("platform") && m.includes("not found") && m.includes("platforms")) return true;
+  // No updater endpoints / 404 / offline can be silenced too
+  if (m.includes("not found") && m.includes("latest.json")) return true;
+  if (m.includes("network") || m.includes("failed to fetch")) return true;
+  // Permission issues in dev (capabilities)
+  if (m.includes("updater.check not allowed")) return true;
+  return false;
+}
+
 export default function Updater() {
   const [show, setShow] = useState(false);
   const [update, setUpdate] = useState<Update | null>(null);
@@ -10,22 +34,24 @@ export default function Updater() {
   const [totalBytes, setTotalBytes] = useState<number | undefined>();
   const [downloadedBytes, setDownloadedBytes] = useState(0);
 
-// ...existing code...
   useEffect(() => {
     const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-    console.log("[Updater] mounted, isTauri:", isTauri);
     if (!isTauri) return;
 
     (async () => {
       try {
-        console.log("[Updater] checking…");
         const u = await check();
-        console.log("[Updater] result:", u);
         if (u && u.available) {
           setUpdate(u);
           setTimeout(() => setShow(true), 50);
         }
       } catch (e) {
+        if (shouldIgnore(e)) {
+          // Quietly skip when the running arch is not present in latest.json (or other benign cases)
+          console.debug("[Updater] skipped:", getErrorMessage(e));
+          return;
+        }
+        // Unexpected issue: still log but don’t show UI
         console.error("[Updater] check error:", e);
       }
     })();
@@ -46,9 +72,7 @@ export default function Updater() {
           const { chunkLength } = e.data as { chunkLength: number };
           setDownloadedBytes((prev) => {
             const next = prev + chunkLength;
-            if (totalBytes) {
-              setProgress({ pct: Math.round((next / totalBytes) * 100) });
-            }
+            if (totalBytes) setProgress({ pct: Math.round((next / totalBytes) * 100) });
             return next;
           });
         } else if (e.event === "Finished") {
@@ -57,7 +81,7 @@ export default function Updater() {
       });
       await relaunch();
     } catch {
-      // optional: show error/toast
+      // optional: toast/log
     }
   };
 

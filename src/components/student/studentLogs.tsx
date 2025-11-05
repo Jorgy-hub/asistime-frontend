@@ -103,7 +103,7 @@ export default function StudentLogsPanel({ logs: inputLogs, loading, onFilteredC
   }, [filteredLogs, totalLogs, page, pageCount, startIdx, endIdx, startDate, endDate, showEntries, showExits, includeDenied]);
 
   return (
-    <div className="bg-zinc-900 overflow-hidden flex flex-col rounded-lg shadow-lg">
+    <div className="bg-zinc-900 flex flex-col rounded-lg shadow-lg overflow-visible">
       <div className="px-4 pt-4 pb-1 flex items-center justify-between">
         <span className="text-xs text-zinc-400">Actividad</span>
         <span className="text-[11px] text-zinc-500">
@@ -122,6 +122,7 @@ export default function StudentLogsPanel({ logs: inputLogs, loading, onFilteredC
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="w-full bg-zinc-950 rounded-md px-2 py-1 text-xs"
+              style={{ appearance: "auto", WebkitAppearance: "auto" }}
             />
           </div>
           <div>
@@ -131,6 +132,7 @@ export default function StudentLogsPanel({ logs: inputLogs, loading, onFilteredC
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="w-full bg-zinc-950 rounded-md px-2 py-1 text-xs"
+              style={{ appearance: "auto", WebkitAppearance: "auto" }}
             />
           </div>
         </div>
