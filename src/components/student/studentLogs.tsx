@@ -122,7 +122,7 @@ export default function StudentLogsPanel({ logs: inputLogs, loading, onFilteredC
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="w-full bg-zinc-950 rounded-md px-2 py-1 text-xs"
-              style={{ appearance: "auto", WebkitAppearance: "auto" }}
+              style={{ appearance: "auto" }}
             />
           </div>
           <div>
@@ -132,7 +132,7 @@ export default function StudentLogsPanel({ logs: inputLogs, loading, onFilteredC
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="w-full bg-zinc-950 rounded-md px-2 py-1 text-xs"
-              style={{ appearance: "auto", WebkitAppearance: "auto" }}
+              style={{ appearance: "auto" }}
             />
           </div>
         </div>
