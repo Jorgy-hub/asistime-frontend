@@ -2,7 +2,8 @@ name: Tauri Release (macOS, Windows)
 
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -57,23 +58,82 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           # Do NOT set password envs since your key has no passphrase
 
-      # Rename tauri’s latest.json per OS and upload back to the release
-      - name: Prepare + upload latest-macos.json
-        if: matrix.os == 'macos-latest'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -e
-          gh release download "${{ github.ref_name }}" -p latest.json -D .
-          mv latest.json latest-macos.json
-          gh release upload "${{ github.ref_name }}" latest-macos.json --clobber
-
+      # WINDOWS: download MSI/EXE from the release, sign them, build latest-windows.json, upload
       - name: Prepare + upload latest-windows.json
         if: matrix.os == 'windows-latest'
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
         run: |
-          gh release download "${{ github.ref_name }}" -p latest.json -D .
-          Rename-Item latest.json latest-windows.json
-          gh release upload "${{ github.ref_name }}" latest-windows.json --clobber
+          $tag = "${{ github.ref_name }}"
+          $repo = "${{ github.repository }}"
+
+          gh release download $tag -p "*.msi" -D .
+          gh release download $tag -p "*-setup*.exe" -D . || true
+
+          $msi = Get-ChildItem *.msi -ErrorAction SilentlyContinue | Select-Object -First 1
+          $exe = Get-ChildItem *-setup*.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+
+          if (-not $msi -and -not $exe) { throw "No Windows installer assets found" }
+
+          $version = $tag.TrimStart('v')
+          $pubDate = (Get-Date).ToUniversalTime().ToString("s") + "Z"
+
+          $platforms = @{}
+
+          if ($msi) {
+            $msiUrl = "https://github.com/$repo/releases/download/$tag/$($msi.Name)"
+            $sigMsi = npx tauri signer sign "$($msi.Name)"
+            $platforms["windows-x86_64"] = @{ signature = $sigMsi; url = $msiUrl }
+            $platforms["windows-x86_64-msi"] = @{ signature = $sigMsi; url = $msiUrl }
+          }
+
+          if ($exe) {
+            $exeUrl = "https://github.com/$repo/releases/download/$tag/$($exe.Name)"
+            $sigExe = npx tauri signer sign "$($exe.Name)"
+            $platforms["windows-x86_64-nsis"] = @{ signature = $sigExe; url = $exeUrl }
+          }
+
+          $json = @{
+            version = $version
+            notes = "Automated Tauri release"
+            pub_date = $pubDate
+            platforms = $platforms
+          } | ConvertTo-Json -Depth 10
+
+          $json | Out-File latest-windows.json -Encoding utf8
+          gh release upload $tag latest-windows.json --clobber
+
+      # macOS: download DMG from the release, sign it, build latest-macos.json, upload
+      - name: Generate + upload latest-macos.json
+        if: matrix.os == 'macos-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh release download "${TAG}" -p "*.dmg" -D .
+          DMG="$(ls *.dmg | head -n1 || true)"
+          if [ -z "${DMG}" ]; then echo "No DMG asset on release"; exit 1; fi
+
+          SIG_CONTENT="$(npx tauri signer sign "${DMG}")"
+          VERSION="${TAG#v}"
+          PUB_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          URL="https://github.com/${REPO}/releases/download/${TAG}/${DMG}"
+
+          cat > latest-macos.json <<JSON
+          {
+            "version": "${VERSION}",
+            "notes": "Automated Tauri release",
+            "pub_date": "${PUB_DATE}",
+            "platforms": {
+              "darwin-x86_64": { "signature": ${SIG_CONTENT@Q}, "url": "${URL}" },
+              "darwin-aarch64": { "signature": ${SIG_CONTENT@Q}, "url": "${URL}" }
+            }
+          }
+          JSON
+
+          gh release upload "${TAG}" latest-macos.json --clobber
