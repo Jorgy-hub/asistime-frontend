@@ -55,43 +55,81 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          # No password envs (key is unencrypted)
 
-      # Grab tauri's latest.json immediately and re-upload with OS-specific name
-      - name: Prepare latest-macos.json
-        if: matrix.os == 'macos-latest'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -e
-          # retry until the asset appears (eventual consistency)
-          for i in {1..10}; do
-            if gh release download "${{ github.ref_name }}" -p latest.json -D .; then
-              mv latest.json latest-macos.json
-              gh release upload "${{ github.ref_name }}" latest-macos.json --clobber
-              exit 0
-            fi
-            echo "latest.json not up yet, retry $i"; sleep 5
-          done
-          echo "latest.json not found after retries"; exit 1
-
-      - name: Prepare latest-windows.json
+      # WINDOWS: sign local artifacts and create latest-windows.json
+      - name: Prepare + upload latest-windows.json
         if: matrix.os == 'windows-latest'
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
         run: |
-          for ($i=1; $i -le 10; $i++) {
-            try {
-              gh release download "${{ github.ref_name }}" -p latest.json -D .
-              Rename-Item latest.json latest-windows.json -Force
-              gh release upload "${{ github.ref_name }}" latest-windows.json --clobber
-              exit 0
-            } catch {
-              Write-Host "latest.json not up yet, retry $i"; Start-Sleep -Seconds 5
+          $tag = "${{ github.ref_name }}"
+          $repo = "${{ github.repository }}"
+          $bundle = "src-tauri\target\release\bundle"
+
+          $msi = Get-ChildItem $bundle -Recurse -File -Filter *.msi | Select-Object -First 1
+          $exe = Get-ChildItem $bundle -Recurse -File -Filter *-setup*.exe | Select-Object -First 1
+          if (-not $msi -and -not $exe) { throw "No Windows installer artifacts found under $bundle" }
+
+          $version = $tag.TrimStart('v')
+          $pubDate = (Get-Date).ToUniversalTime().ToString("s") + "Z"
+          $platforms = @{}
+
+          if ($msi) {
+            $sigMsi = npx tauri signer sign "$($msi.FullName)"
+            $urlMsi = "https://github.com/$repo/releases/download/$tag/$($msi.Name)"
+            $platforms["windows-x86_64"] = @{ signature = $sigMsi; url = $urlMsi }
+            $platforms["windows-x86_64-msi"] = @{ signature = $sigMsi; url = $urlMsi }
+          }
+          if ($exe) {
+            $sigExe = npx tauri signer sign "$($exe.FullName)"
+            $urlExe = "https://github.com/$repo/releases/download/$tag/$($exe.Name)"
+            $platforms["windows-x86_64-nsis"] = @{ signature = $sigExe; url = $urlExe }
+          }
+
+          $json = @{
+            version = $version
+            notes = "Automated Tauri release"
+            pub_date = $pubDate
+            platforms = $platforms
+          } | ConvertTo-Json -Depth 10
+
+          $json | Out-File latest-windows.json -Encoding utf8
+          gh release upload $tag latest-windows.json --clobber
+
+      # macOS: sign local DMG and create latest-macos.json
+      - name: Generate + upload latest-macos.json
+        if: matrix.os == 'macos-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          DMG="$(find src-tauri/target -type f -name '*.dmg' | head -n1 || true)"
+          if [ -z "${DMG}" ]; then echo "No DMG found"; exit 1; fi
+
+          SIG_CONTENT="$(npx tauri signer sign "${DMG}")"
+          VERSION="${TAG#v}"
+          PUB_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          NAME="$(basename "${DMG}")"
+          URL="https://github.com/${REPO}/releases/download/${TAG}/${NAME}"
+
+          cat > latest-macos.json <<JSON
+          {
+            "version": "${VERSION}",
+            "notes": "Automated Tauri release",
+            "pub_date": "${PUB_DATE}",
+            "platforms": {
+              "darwin-x86_64": { "signature": ${SIG_CONTENT@Q}, "url": "${URL}" },
+              "darwin-aarch64": { "signature": ${SIG_CONTENT@Q}, "url": "${URL}" }
             }
           }
-          throw "latest.json not found after retries"
+          JSON
+
+          gh release upload "${TAG}" latest-macos.json --clobber
 
   merge-latest:
     needs: build
