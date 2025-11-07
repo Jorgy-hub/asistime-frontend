@@ -309,7 +309,7 @@ export default function StudentsPage() {
                 <div>
                   <label className="text-[11px] uppercase tracking-wide text-zinc-400">Matricula</label>
                   <input
-                    className="mt-1 w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                    className="mt-1 w-full bg-zinc-950 rounded-lg px-3 py-2 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                     placeholder="Matricula"
                     value={idQ}
                     onChange={(e) => setIdQ(e.target.value)}
@@ -320,7 +320,7 @@ export default function StudentsPage() {
                   <div>
                     <label className="text-[11px] uppercase tracking-wide text-zinc-400">Grupo</label>
                     <input
-                      className="mt-1 w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                      className="mt-1 w-full bg-zinc-950 rounded-lg px-3 py-2 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                       placeholder="Grupo"
                       value={group}
                       onChange={(e) => setGroup(e.target.value)}
@@ -329,7 +329,7 @@ export default function StudentsPage() {
                   <div>
                     <label className="text-[11px] uppercase tracking-wide text-zinc-400">Semestre</label>
                     <input
-                      className="mt-1 w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                      className="mt-1 w-full bg-zinc-950 rounded-lg px-3 py-2 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                       placeholder="Semestre"
                       value={semester}
                       onChange={(e) => setSemester(e.target.value)}
@@ -341,7 +341,7 @@ export default function StudentsPage() {
                   <div>
                     <label className="text-[11px] uppercase tracking-wide text-zinc-400">Turno</label>
                     <select
-                      className="mt-1 w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                      className="mt-1 w-full bg-zinc-950 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                       value={shift}
                       onChange={(e) => setShift(e.target.value)}
                     >
@@ -354,7 +354,7 @@ export default function StudentsPage() {
                   <div>
                     <label className="text-[11px] uppercase tracking-wide text-zinc-400">Estado</label>
                     <select
-                      className="mt-1 w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                      className="mt-1 w-full bg-zinc-950 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                       value={statusFilter}
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       onChange={(e) => setStatusFilter(e.target.value as any)}
