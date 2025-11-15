@@ -216,7 +216,7 @@ export default function TodayActivityBar() {
                 key={d.key}
                 onClick={() => setSelectedIdx(i)}
                 className={[
-                  "flex flex-col items-center justify-center rounded-xl px-3 py-2 min-w-[56px] border",
+                  "flex flex-col items-center justify-center rounded-xl px-3 py-2 min-w-[56px] border cursor-pointer",
                   active
                     ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
                     : "bg-zinc-800/60 border-zinc-700 text-zinc-300 hover:bg-zinc-700/60",

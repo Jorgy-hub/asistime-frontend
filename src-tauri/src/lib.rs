@@ -5,7 +5,8 @@ use commands::auth::{get_user, login};
 use commands::health::health_check;
 use commands::students::{
     student_detail, students_count_currently_inside, students_count_currently_outside,
-    students_count_new, students_count_total, students_filter,
+    students_count_new, students_count_total, students_filter, student_report_create,
+    student_report_update, student_report_delete, qr_zip_generate, students_import_new, students_import_update,
 };
 use commands::user::{create_user, delete_user, list_users, update_user};
 use tauri_plugin_updater::UpdaterExt;
@@ -44,6 +45,12 @@ pub fn run() {
             create_user,
             update_user,
             delete_user,
+            student_report_create,
+            student_report_update,
+            student_report_delete,
+            qr_zip_generate,
+            students_import_new,
+            students_import_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

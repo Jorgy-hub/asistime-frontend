@@ -264,9 +264,9 @@ export default function AdminUsersManager({ token }: { token?: string }) {
   };
 
   return (
-    <div className="w-full h-full px-4 py-4">
+    <div className="w-full h-full px-2 py-4">
       {/* Encabezado */}
-      <div className="mb-6">
+      <div className="mb-2">
         <div className="mt-1 flex items-end justify-between">
           <h1 className="text-xl font-semibold text-zinc-100">Lista de usuarios</h1>
           {message && <div className="text-xs px-3 py-1 rounded-md bg-emerald-600/15 text-emerald-300">{message}</div>}

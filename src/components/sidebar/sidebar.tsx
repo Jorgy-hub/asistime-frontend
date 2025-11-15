@@ -9,7 +9,7 @@ interface SidebarProps {
 }
 
 const baseBtn =
-  "w-12 h-12 rounded-full p-2 group relative flex items-center justify-center transition-colors";
+  "w-12 h-12 rounded-full p-2 group relative flex items-center justify-center transition-colors cursor-pointer";
 const active = "text-white bg-amber-500 ring-4 ring-amber-500/25";
 const inactive = "text-zinc-300 hover:text-white hover:bg-zinc-700";
 

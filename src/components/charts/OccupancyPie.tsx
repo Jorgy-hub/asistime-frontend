@@ -65,7 +65,7 @@ export default function OccupancyPie() {
 
   const chartData = useMemo(() => {
     const unknown = Math.max(counts.total - counts.inside - counts.outside, 0);
-    const labels = ["Dentro", "Fuera"].concat(unknown > 0 ? ["Desconocido"] : []);
+    const labels = ["Dentro", "Fuera"].concat(unknown > 0 ? ["Ausentes"] : []);
     const vals = [counts.inside, counts.outside].concat(unknown > 0 ? [unknown] : []);
     const colors = ["#10b981", "#f43f5e"].concat(unknown > 0 ? ["#a1a1aa"] : []);
     return {
@@ -93,7 +93,7 @@ export default function OccupancyPie() {
         {/* Stack: pie on top, numbers below (centered) */}
         <div className="flex-1 min-h-0 flex flex-col items-center gap-4">
           {/* Pie size matches bar heights */}
-          <div className="w-64 h-64 sm:w-72 sm:h-72 lg:w-80 lg:h-80">
+          <div className="w-64 h-64 sm:w-72 sm:h-72 lg:w-80 lg:h-80 cursor-pointer">
             <Doughnut
               data={chartData}
               options={{
@@ -123,7 +123,7 @@ export default function OccupancyPie() {
             </div>
             {Math.max(counts.total - counts.inside - counts.outside, 0) > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-zinc-400">Desconocido</span>
+                <span className="text-zinc-400">Ausentes</span>
                 <span className="text-zinc-300 tabular-nums">
                   {Math.max(counts.total - counts.inside - counts.outside, 0)}
                 </span>
