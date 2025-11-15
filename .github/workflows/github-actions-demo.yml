@@ -23,6 +23,12 @@ jobs:
         with:
           node-version: 20
           cache: npm
+      
+      - name: 'Create env file'
+        run: |
+          touch .env
+          echo API_BASE_URL=${{ secrets.BASE_URL }} >> .env
+          cat .env
 
       - name: Install deps (npm ci)
         if: ${{ hashFiles('package-lock.json') != '' }}
