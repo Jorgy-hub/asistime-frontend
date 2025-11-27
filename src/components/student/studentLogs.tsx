@@ -144,7 +144,7 @@ export default function StudentLogsPanel({ logs: inputLogs, loading, onFilteredC
               type="checkbox"
               checked={showEntries}
               onChange={(e) => setShowEntries(e.target.checked)}
-              className="accent-emerald-500"
+              className="accent-emerald-500 cursor-pointer"
             />
             Entradas
           </label>
@@ -153,7 +153,7 @@ export default function StudentLogsPanel({ logs: inputLogs, loading, onFilteredC
               type="checkbox"
               checked={showExits}
               onChange={(e) => setShowExits(e.target.checked)}
-              className="accent-rose-500"
+              className="accent-rose-500 cursor-pointer"
             />
             Salidas
           </label>
@@ -162,7 +162,7 @@ export default function StudentLogsPanel({ logs: inputLogs, loading, onFilteredC
               type="checkbox"
               checked={includeDenied}
               onChange={(e) => setIncludeDenied(e.target.checked)}
-              className="accent-amber-500"
+              className="accent-amber-500 cursor-pointer"
             />
             Rechazados
           </label>
@@ -171,7 +171,7 @@ export default function StudentLogsPanel({ logs: inputLogs, loading, onFilteredC
         <div>
           <button
             onClick={clearFilters}
-            className="px-2 py-1 text-[11px] rounded-md border border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+            className="px-2 py-1 text-[11px] rounded-md border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 cursor-pointer"
           >
             Limpiar filtros
           </button>

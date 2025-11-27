@@ -231,10 +231,10 @@ export default function ExcelExporter({ student, logsAll, logsFiltered, filename
       </div>
       {!inTauri && <div className="text-[10px] text-amber-400">No estás en Tauri: usando método del navegador.</div>}
       <div className="flex flex-col sm:flex-row gap-2">
-        <button onClick={exportFiltered} disabled={!student || logsFiltered.length === 0 || busy !== null} className="flex-1 px-3 py-2 rounded-md text-xs font-medium bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40">
+        <button onClick={exportFiltered} disabled={!student || logsFiltered.length === 0 || busy !== null} className="flex-1 px-3 py-2 rounded-md text-xs font-medium bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 cursor-pointer">
           {busy === "filtered" ? "Generando…" : "Descargar (Filtrado)"}
         </button>
-        <button onClick={exportAll} disabled={!student || logsAll.length === 0 || busy !== null} className="flex-1 px-3 py-2 rounded-md text-xs font-medium bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40">
+        <button onClick={exportAll} disabled={!student || logsAll.length === 0 || busy !== null} className="flex-1 px-3 py-2 rounded-md text-xs font-medium bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 cursor-pointer">
           {busy === "all" ? "Generando…" : "Descargar (Todos)"}
         </button>
       </div>

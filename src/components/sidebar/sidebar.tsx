@@ -55,7 +55,7 @@ const Sidebar = ({ admin = false }: SidebarProps) => {
       key: "students",
       label: "Students",
       path: "/panel/students",
-      match: (p) => p.startsWith("/panel/students"),
+      match: (p) => p.startsWith("/panel/students") || p.startsWith("/panel/student"),
       hidden: !canSeeStudents,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">

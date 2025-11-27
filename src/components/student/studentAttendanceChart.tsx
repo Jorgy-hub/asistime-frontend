@@ -157,19 +157,19 @@ export default function StudentAttendanceChart({
         <div className="text-xs font-medium text-zinc-400">{title}</div>
         <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-md">
           <button
-            className={`px-2 py-1 text-xs rounded-md ${range === "week" ? "bg-zinc-800 text-zinc-100" : "bg-zinc-950 text-zinc-400"}`}
+            className={`cursor-pointer px-2 py-1 text-xs rounded-md ${range === "week" ? "bg-zinc-800 text-zinc-100" : "bg-zinc-950 text-zinc-400"}`}
             onClick={() => setRange("week")}
           >
             Semana
           </button>
           <button
-            className={`px-2 py-1 text-xs rounded-md ${range === "month" ? "bg-zinc-800 text-zinc-100" : "bg-zinc-950 text-zinc-400"}`}
+            className={`cursor-pointer px-2 py-1 text-xs rounded-md ${range === "month" ? "bg-zinc-800 text-zinc-100" : "bg-zinc-950 text-zinc-400"}`}
             onClick={() => setRange("month")}
           >
             Mes
           </button>
           <button
-            className={`px-2 py-1 text-xs rounded-md ${range === "semester" ? "bg-zinc-800 text-zinc-100" : "bg-zinc-950 text-zinc-400"}`}
+            className={`cursor-pointer px-2 py-1 text-xs rounded-md ${range === "semester" ? "bg-zinc-800 text-zinc-100" : "bg-zinc-950 text-zinc-400"}`}
             onClick={() => setRange("semester")}
           >
             Semestre

@@ -211,7 +211,7 @@ export default function StudentDetailPage() {
       <div className="relative rounded-lg shadow-lg bg-[url(/images/bg2.jpg)] bg-cover bg-center overflow-hidden">
         <div className="absolute top-3 right-3 z-10">
           <button
-            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:opacity-95 shadow-md"
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:opacity-95 shadow-md cursor-pointer select-none"
             onClick={() => setReportOpen(true)}
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -12,7 +12,7 @@ export default function GenerateQRCodesButton() {
   const [visible, setVisible] = useState(false);
 
   // Defaults: base URL already including /students
-  const [baseUrl, setBaseUrl] = useState("http://172.16.0.110:1420/students");
+  const [baseUrl, setBaseUrl] = useState("http://85.239.243.19:1420/students");
   const [fmt, setFmt] = useState<"png" | "svg">("png");
   const [size, setSize] = useState(512);
 

@@ -8,10 +8,13 @@ use tauri::AppHandle;
 
 use registry::build_with_registered_events;
 
+static API_BASE: Lazy<String> = Lazy::new(|| {
+    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://85.239.243.19:1420".to_string())
+});
+
 pub fn spawn_socket_thread(handle: AppHandle) {
     std::thread::spawn(move || {
-        let url =
-            std::env::var("SOCKET_URL").unwrap_or_else(|_| "http://localhost:1420".to_string());
+        let url = std::env::var("SOCKET_URL").unwrap_or_else(|_| "http://85.239.243.19:1420".to_string());
         let namespace = "/";
         println!("[socket] connecting to {url} ns={namespace}");
 
