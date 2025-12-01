@@ -2,7 +2,7 @@ mod commands;
 mod socket;
 
 use commands::auth::{get_user, login};
-use commands::health::health_check;
+use commands::health::{health_check, app_get_uri, app_update_uri};
 use commands::students::{
     student_detail, students_count_currently_inside, students_count_currently_outside,
     students_count_new, students_count_total, students_filter, student_report_create,
@@ -51,6 +51,8 @@ pub fn run() {
             qr_zip_generate,
             students_import_new,
             students_import_update,
+            app_get_uri,
+            app_update_uri,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
