@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import DateInput from "../dateInput/dateInput";
 
 type EntranceLog = { at: number; exit: boolean; accepted: boolean };
 
@@ -117,22 +118,18 @@ export default function StudentLogsPanel({ logs: inputLogs, loading, onFilteredC
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-[11px] uppercase tracking-wide text-zinc-500 mb-1">Desde</label>
-            <input
-              type="date"
+            <DateInput
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full bg-zinc-950 rounded-md px-2 py-1 text-xs"
-              style={{ appearance: "auto" }}
+              className="w-full rounded-md px-2 py-1 bg-zinc-950 text-xs focus:outline-none focus:border-none"
             />
           </div>
           <div>
-            <label className="block text-[11px] uppercase tracking-wide text-zinc-500 mb-1">Hasta</label>
-            <input
-              type="date"
+            <label className="block text-[11px] uppercase tracking-wide text-zinc-500 mb-1 focus:outline-none focus:border-none">Hasta</label>
+            <DateInput
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full bg-zinc-950 rounded-md px-2 py-1 text-xs"
-              style={{ appearance: "auto" }}
+              className="w-full rounded-md px-2 py-1 bg-zinc-950 text-xs focus:outline-none focus:border-none"
             />
           </div>
         </div>
@@ -196,8 +193,8 @@ export default function StudentLogsPanel({ logs: inputLogs, loading, onFilteredC
             const colorCls = isDenied
               ? "bg-amber-500/10 border-amber-500/40 text-amber-300"
               : l.exit
-              ? "bg-rose-500/10 border-rose-500/40 text-rose-300"
-              : "bg-emerald-500/10 border-emerald-500/40 text-emerald-300";
+                ? "bg-rose-500/10 border-rose-500/40 text-rose-300"
+                : "bg-emerald-500/10 border-emerald-500/40 text-emerald-300";
             const badgeText = isDenied ? "Rechazado" : l.exit ? "Salida" : "Entrada";
 
             const rowBg = (i + 1) % 2 ? "bg-zinc-950/30" : "bg-zinc-900";

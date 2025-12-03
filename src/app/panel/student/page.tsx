@@ -222,25 +222,37 @@ export default function StudentDetailPage() {
         </div>
 
         <div className="h-40 sm:h-48 rounded-t-lg" />
-        <div className="pt-16 pb-6 px-6 sm:px-4 flex flex-col md:flex-row gap-4 bg-zinc-950/80 backdrop-blur-sm">
-          <div className="flex-row pl-2">
-            <h1 className="text-2xl font-semibold">
-              {data?.name || (err ? "Error" : loading ? "Cargando…" : "Desconocido")}
-            </h1>
-            {data?.career && <span className="text-sm text-zinc-400"> # {data.id} - {data.career}</span>}
-          </div>
-          <div className="absolute top-20 sm:top-24 left-6 translate-y-1/2">
+
+        <div className="relative pt-16 pb-6 px-6 sm:px-4 flex flex-col md:flex-row items-start gap-4 bg-zinc-950/80 backdrop-blur-sm">
+          {/* Avatar (centrado verticalmente en la separación banner/stripe) */}
+          <div className="absolute left-6 top-0 -translate-y-1/2 z-20">
             <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-black ring-4 ring-zinc-900/70 flex items-center justify-center text-2xl font-semibold">
               {String(data?.name || "?").slice(0, 1).toUpperCase()}
             </div>
           </div>
-          <div className="flex-row sm:items-center gap-3">
-            <div className="flex items-center gap-2">
-              <ShiftBadge value={data?.shift} />
-              <StatusBadge s={derived.status} />
-              <SemesterBadge semester={data?.semester} prevSemester={data?.prev_semester} />
+
+          {/* Left column: nombre + badges en la misma línea, carrera debajo */}
+          <div className="flex-1 pl-6 sm:pl-6 flex items-start">
+            <div className="flex flex-col justify-start mt-2 w-full">
+              <div className="flex items-center justify-start gap-4">
+                <h1 className="text-2xl font-semibold text-left">
+                  {data?.name || (err ? "Error" : loading ? "Cargando…" : "Desconocido")}
+                </h1>
+
+                <div className="flex items-center gap-2">
+                  <ShiftBadge value={data?.shift} />
+                  <StatusBadge s={derived.status} />
+                  <SemesterBadge semester={data?.semester} prevSemester={data?.prev_semester} />
+                </div>
+              </div>
+
+              {data?.career && (
+                <span className="mt-1 text-sm text-zinc-400"> # {data.id} - {data.career}</span>
+              )}
             </div>
           </div>
+
+          {/* (Right badges removed — ahora están junto al nombre) */}
         </div>
       </div>
 

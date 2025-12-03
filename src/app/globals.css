@@ -15,6 +15,39 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Simple, discreto: pista transparente + thumb oscuro semitransparente */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.45); /* oscuro y sutil por defecto */
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Ajuste para tema claro: thumb oscuro más suave */
+@media (prefers-color-scheme: light) {
+  *::-webkit-scrollbar-thumb { background-color: rgba(0, 0, 0, 0.25); }
+  *::-webkit-scrollbar-thumb:hover { background-color: rgba(0, 0, 0, 0.35); }
+}
+
+/* Firefox */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.45) transparent;
+}
+@media (prefers-color-scheme: light) {
+  html { scrollbar-color: rgba(0,0,0,0.25) transparent; }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -58,4 +91,38 @@ body {
     opacity: 1 !important;
     transform: none !important;
   }
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  width: 1.6rem;
+  height: 1.6rem;
+  cursor: pointer;
+  display: inline-block;
+  -webkit-appearance: none;
+}
+
+/* Asegura apariencia consistente */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="date"]::-moz-focus-outer {
+  outline: none;
+}
+
+input[type="date"]:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* A veces el indicador nativo añade borde; también limpiar sub-elementos webkit */
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  outline: none;
+  box-shadow: none;
 }
