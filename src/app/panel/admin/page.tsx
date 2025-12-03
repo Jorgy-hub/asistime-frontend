@@ -8,6 +8,7 @@ import StudentsExcelImporter from "@/components/admin/StudentsExcelImporter";
 import { invoke } from "@tauri-apps/api/core";
 
 const APP_ID = "prepa3" as const;
+const DEFAULT_URL = "https://drive.google.com/file/d/1iMoVrEppQ8jSB-5XJxSEYxKl2s5BETRg/view?usp=sharing" as const;
 
 export default function AdminPage() {
   const { user, token } = useAuth();
@@ -107,6 +108,12 @@ export default function AdminPage() {
               className="px-3 py-1.5 rounded-full text-xs bg-gradient-to-r from-amber-500 to-amber-600 text-white disabled:opacity-50"
             >
               {savingUri ? "Guardando…" : "Guardar"}
+            </button>
+            <button
+              onClick={() => setUri(DEFAULT_URL)}
+              className="px-3 py-1.5 rounded-md text-xs bg-zinc-800 hover:bg-zinc-700"
+            >
+              Default URL
             </button>
             <button
               onClick={async () => {
