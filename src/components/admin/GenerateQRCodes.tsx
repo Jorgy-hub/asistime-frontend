@@ -12,7 +12,7 @@ export default function GenerateQRCodesButton() {
   const [visible, setVisible] = useState(false);
 
   // Defaults: base URL already including /students
-  const [baseUrl, setBaseUrl] = useState("http://85.239.243.19:1420/students");
+  const [baseUrl, setBaseUrl] = useState("https://api.asistime.cloud/students");
   const [fmt, setFmt] = useState<"png" | "svg">("png");
   const [size, setSize] = useState(512);
 
@@ -175,7 +175,7 @@ export default function GenerateQRCodesButton() {
                   className="w-full bg-zinc-950 rounded-lg px-3 py-2 text-sm"
                   value={baseUrl}
                   onChange={(e) => setBaseUrl(e.target.value)}
-                  placeholder="https://api.tu-dominio.com/students"
+                  placeholder="https://api.asistime.cloud/students"
                 />
                 <div className="mt-1 text-[11px] text-zinc-500">
                   La URL final será: {baseUrl.replace(/\/+$/, "")}/{"{id}"}
