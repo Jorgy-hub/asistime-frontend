@@ -12,7 +12,7 @@ export default function GenerateQRCodesButton() {
   const [visible, setVisible] = useState(false);
 
   // Defaults: base URL already including /students
-  const [baseUrl, setBaseUrl] = useState("https://api.asistime.cloud/students");
+  const [baseUrl, setBaseUrl] = useState("http://85.239.243.19/students");
   const [fmt, setFmt] = useState<"png" | "svg">("png");
   const [size, setSize] = useState(512);
 
@@ -71,6 +71,21 @@ export default function GenerateQRCodesButton() {
       cleanupListener();
     };
   }, []);
+
+  // Close modal with Escape key
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeModal();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, loading]);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -175,7 +190,7 @@ export default function GenerateQRCodesButton() {
                   className="w-full bg-zinc-950 rounded-lg px-3 py-2 text-sm"
                   value={baseUrl}
                   onChange={(e) => setBaseUrl(e.target.value)}
-                  placeholder="https://api.asistime.cloud/students"
+                  placeholder="http://85.239.243.19/students"
                 />
                 <div className="mt-1 text-[11px] text-zinc-500">
                   La URL final será: {baseUrl.replace(/\/+$/, "")}/{"{id}"}
