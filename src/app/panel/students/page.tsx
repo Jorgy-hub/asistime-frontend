@@ -154,7 +154,7 @@ export default function StudentsPage() {
           group: group || null,
           semester: semester || null,
           career: null,
-          shift: shift || null,
+          shift: shift?.toUpperCase() || null,
         });
         if (mySeq !== reqSeqRef.current) return;
         const withDerived = rows.map((s) => {
@@ -336,7 +336,7 @@ export default function StudentsPage() {
                     <label className="text-[11px] uppercase tracking-wide text-zinc-400">Turno</label>
                     <select
                       className="mt-1 w-full bg-zinc-950 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                      value={shift}
+                      value={shift.toUpperCase()}
                       onChange={(e) => setShift(e.target.value)}
                     >
                       <option value="">Todos</option>

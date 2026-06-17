@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 
 static API_BASE: Lazy<String> = Lazy::new(|| {
-    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://85.239.243.19".to_string())
+    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://85.239.243.19:1420".to_string())
 });
 
 #[tauri::command]

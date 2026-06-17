@@ -76,7 +76,7 @@ export default function StudentsExcelImporter() {
 
             <div className="space-y-2 space-x-2">
                 <label className="block text-[11px] uppercase tracking-wide text-zinc-400">
-                    Nuevos (1er semestre)
+                    Importar Sabana para ingreso o actualización (si el ID ya existe, se actualiza; si no, se inserta)
                 </label>
                 <input
                     type="file"
@@ -94,30 +94,6 @@ export default function StudentsExcelImporter() {
                 {resNew && (
                     <pre className="mt-2 text-[10px] bg-zinc-800 p-2 rounded overflow-x-auto">
                         {JSON.stringify(resNew, null, 2)}
-                    </pre>
-                )}
-            </div>
-
-            <div className="space-y-2 space-x-2">
-                <label className="block text-[11px] uppercase tracking-wide text-zinc-400">
-                    Actualizar (2º–4º semestre)
-                </label>
-                <input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={(e) => setUpdateFile(e.target.files?.[0] || null)}
-                    className="text-xs bg-zinc-950 px-2 py-2 rounded-full"
-                />
-                <button
-                    onClick={handleUpdate}
-                    disabled={!updateFile || loadingUpdate}
-                    className="px-3 py-1.5 rounded-full text-xs bg-gradient-to-r from-amber-500 to-amber-600 text-white disabled:opacity-40"
-                >
-                    {loadingUpdate ? "Procesando…" : "Actualizar existentes"}
-                </button>
-                {resUpdate && (
-                    <pre className="mt-2 text-[10px] bg-zinc-800 p-2 rounded overflow-x-auto">
-                        {JSON.stringify(resUpdate, null, 2)}
                     </pre>
                 )}
             </div>
