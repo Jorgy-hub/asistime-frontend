@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { importStudents } from "@/services/web/students";
+import { useAuth } from "@/context/AuthProvider";
 
 type Summary = {
     inserted?: number;
@@ -24,6 +26,8 @@ function fileToBase64(f: File): Promise<string> {
 }
 
 export default function StudentsExcelImporter() {
+    const { user } = useAuth();
+    const schoolId = String(user?.school_id || "");
     const [newFile, setNewFile] = useState<File | null>(null);
     const [updateFile, setUpdateFile] = useState<File | null>(null);
     const [resNew, setResNew] = useState<Summary | null>(null);
@@ -39,9 +43,10 @@ export default function StudentsExcelImporter() {
         setResNew(null);
         try {
             const b64 = await fileToBase64(newFile);
-            const summary = await invoke<Summary>("students_import_new", {
-                excelBase64: b64,
-            });
+            const isTauri = typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__);
+            const summary = isTauri
+                ? await invoke<Summary>("students_import_new", { schoolId, excelBase64: b64 })
+                : await importStudents(schoolId, newFile, "new");
             setResNew(summary);
         } catch (e: any) {
             setError(e?.message || "Error importando nuevos.");
@@ -57,9 +62,10 @@ export default function StudentsExcelImporter() {
         setResUpdate(null);
         try {
             const b64 = await fileToBase64(updateFile);
-            const summary = await invoke<Summary>("students_import_update", {
-                excelBase64: b64,
-            });
+            const isTauri = typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__);
+            const summary = isTauri
+                ? await invoke<Summary>("students_import_update", { schoolId, excelBase64: b64 })
+                : await importStudents(schoolId, updateFile, "update");
             setResUpdate(summary);
         } catch (e: any) {
             console.error(e);

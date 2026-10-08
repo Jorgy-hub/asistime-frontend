@@ -1,15 +1,18 @@
 "use client";
 
 import { invoke } from "@tauri-apps/api/core";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { subscribeRealtimeEvent, type RealtimeUnsubscribe } from "@/lib/realtime";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import Link from "next/link";
 import GenerateQRCodesButton from "@/components/admin/GenerateQRCodes";
+import { getFilteredStudents } from "@/services/web/students";
+import { useAuth } from "@/context/AuthProvider";
 
 type EntranceLog = { at: number; exit: boolean; accepted: boolean };
 type StudentLoggedEvent = {
+  schoolId: string;
   id: string | number;
   name: string;
   at: number;
@@ -82,6 +85,8 @@ function deriveStatusAndLast(logs?: EntranceLog[]): { lastSeen: number | null; s
 }
 
 export default function StudentsPage() {
+  const { user } = useAuth();
+  const schoolId = String(user?.school_id || "");
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -98,7 +103,7 @@ export default function StudentsPage() {
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const seenRef = useRef<Set<string>>(new Set());
-  const unsubsRef = useRef<UnlistenFn[]>([]);
+  const unsubsRef = useRef<RealtimeUnsubscribe[]>([]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFiltersOpen(false); };
@@ -148,14 +153,26 @@ export default function StudentsPage() {
       const mySeq = ++reqSeqRef.current;
       setLoading(true); setError(null);
       try {
-        const rows = await invoke<StudentGQL[]>("students_filter", {
-          name: debouncedName || null,
-          id: debouncedId || null,
-          group: group || null,
-          semester: semester || null,
-          career: null,
-          shift: shift?.toUpperCase() || null,
-        });
+        const isTauri = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__;
+        const rows = isTauri
+          ? await invoke<StudentGQL[]>("students_filter", {
+              schoolId,
+              name: debouncedName || null,
+              id: debouncedId || null,
+              group: group || null,
+              semester: semester || null,
+              career: null,
+              shift: shift?.toUpperCase() || null,
+            })
+          : await getFilteredStudents({
+              schoolId,
+              name: debouncedName || null,
+              id: debouncedId || null,
+              group: group || null,
+              semester: semester || null,
+              career: null,
+              shift: shift?.toUpperCase() || null,
+            });
         if (mySeq !== reqSeqRef.current) return;
         const withDerived = rows.map((s) => {
           const d = deriveStatusAndLast(s.logs);
@@ -171,7 +188,7 @@ export default function StudentsPage() {
       }
     };
     run();
-  }, [debouncedName, debouncedId, group, semester, shift]);
+  }, [debouncedName, debouncedId, group, semester, shift, schoolId]);
 
   const filtered = useMemo(() => {
     if (statusFilter === "all") return allItems;
@@ -182,9 +199,9 @@ export default function StudentsPage() {
   useEffect(() => {
     let mounted = true;
     const setup = async () => {
-      const un = await listen<StudentLoggedEvent>("student:logged", (ev) => {
+      const un = await subscribeRealtimeEvent<StudentLoggedEvent>("student:logged", (e) => {
         if (!mounted) return;
-        const e = ev.payload;
+        if (e.schoolId !== schoolId) return;
         const key = `${e.id}-${e.at}-${e.exit ? "x" : "e"}`;
         if (seenRef.current.has(key)) return;
         seenRef.current.add(key);
@@ -209,7 +226,7 @@ export default function StudentsPage() {
       unsubsRef.current.forEach((u) => u());
       unsubsRef.current = [];
     };
-  }, []);
+  }, [schoolId]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -236,15 +253,15 @@ export default function StudentsPage() {
   const [listRef] = useAutoAnimate({ duration: 220, easing: "ease-in-out" });
 
   return (
-    <div className="px-6 py-5 text-white w-full">
-      <div className="flex items-center justify-between">
+    <div data-student-list className="w-full px-3 py-4 text-white sm:px-6 sm:py-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-zinc-100">Estudiantes</h1>
           <p className="text-xs text-zinc-400">
             {loading ? "Cargando…" : `${total} resultado${total === 1 ? "" : "s"}`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <GenerateQRCodesButton />
           <div className="relative">
             <select
@@ -410,7 +427,7 @@ export default function StudentsPage() {
         <ul ref={listRef} className="divide-y divide-zinc-800">
           {loading && pageItems.length === 0 &&
             Array.from({ length: 6 }).map((_, i) => (
-              <li key={i} className="grid grid-cols-[1fr,180px,220px] gap-3 px-4 py-3 bg-zinc-900 animate-pulse">
+              <li key={i} className="grid grid-cols-1 gap-2 bg-zinc-900 px-4 py-3 animate-pulse sm:grid-cols-[1fr,180px,220px]">
                 <div className="h-4 w-2/3 bg-zinc-700/60 rounded" />
                 <div className="h-4 w-24 bg-zinc-700/60 rounded" />
                 <div className="h-4 w-32 bg-zinc-700/60 rounded" />
@@ -433,7 +450,7 @@ export default function StudentsPage() {
               <li key={s.id} className="relative">
                 <Link
                   href={`/panel/student?id=${encodeURIComponent(s.id)}`}
-                  className={`relative grid grid-cols-[1fr,180px,220px] gap-3 px-4 py-3 ${rowBg} hover:bg-zinc-800/80 transition-colors cursor-pointer block`}
+                  className={`relative grid grid-cols-1 gap-2 px-4 py-3 sm:grid-cols-[1fr,180px,220px] ${rowBg} hover:bg-zinc-800/80 transition-colors cursor-pointer block`}
                 >
                   <span className={`absolute left-0 top-0 h-full w-1 bg-gradient-to-b ${accent}`} />
                   <div className="flex items-center gap-3 min-w-0">

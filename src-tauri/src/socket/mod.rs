@@ -10,12 +10,14 @@ use registry::build_with_registered_events;
 use once_cell::sync::Lazy;
 
 static API_BASE: Lazy<String> = Lazy::new(|| {
-    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://85.239.243.19:1420".to_string())
+    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://localhost:1420".to_string())
 });
 
 pub fn spawn_socket_thread(handle: AppHandle) {
     std::thread::spawn(move || {
-        let url = std::env::var("SOCKET_URL").unwrap_or_else(|_| "http://85.239.243.19:1420".to_string());
+        let url = std::env::var("SOCKET_URL")
+            .or_else(|_| std::env::var("API_BASE_URL"))
+            .unwrap_or_else(|_| "http://localhost:1420".to_string());
         let namespace = "/";
         println!("[socket] connecting to {url} ns={namespace}");
 

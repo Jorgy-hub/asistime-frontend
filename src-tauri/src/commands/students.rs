@@ -11,17 +11,17 @@ use reqwest::multipart;
 use base64::{engine::general_purpose, Engine as _};
 
 static API_BASE: Lazy<String> = Lazy::new(|| {
-    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://85.239.243.19:1420".to_string())
+    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://localhost:1420".to_string())
 });
 
 #[tauri::command]
-pub async fn students_count_currently_inside() -> Result<usize, String> {
+pub async fn students_count_currently_inside(school_id: String) -> Result<usize, String> {
     let client = reqwest::Client::builder()
         .build()
         .map_err(|e| e.to_string())?;
 
     let resp = client
-        .get(format!("{}/students/countCurrentlyInside", *API_BASE))
+        .get(format!("{}/students/{}/countCurrentlyInside", *API_BASE, school_id))
         .send()
         .await
         .map_err(|e| format!("Network error: {e}"))?
@@ -41,12 +41,12 @@ pub async fn students_count_currently_inside() -> Result<usize, String> {
 }
 
 #[tauri::command]
-pub async fn students_count_currently_outside() -> Result<usize, String> {
+pub async fn students_count_currently_outside(school_id: String) -> Result<usize, String> {
     let client = reqwest::Client::builder()
         .build()
         .map_err(|e| e.to_string())?;
     let resp = client
-        .get(format!("{}/students/countCurrentlyOutside", *API_BASE))
+        .get(format!("{}/students/{}/countCurrentlyOutside", *API_BASE, school_id))
         .send()
         .await
         .map_err(|e| format!("Network error: {e}"))?
@@ -64,13 +64,13 @@ pub async fn students_count_currently_outside() -> Result<usize, String> {
 }
 
 #[tauri::command]
-pub async fn students_count_total() -> Result<usize, String> {
+pub async fn students_count_total(school_id: String) -> Result<usize, String> {
     let client = reqwest::Client::builder()
         .build()
         .map_err(|e| e.to_string())?;
 
     let resp = client
-        .get(format!("{}/students/countTotalStudents", *API_BASE))
+        .get(format!("{}/students/{}/countTotalStudents", *API_BASE, school_id))
         .send()
         .await
         .map_err(|e| format!("Network error: {e}"))?
@@ -90,13 +90,13 @@ pub async fn students_count_total() -> Result<usize, String> {
 }
 
 #[tauri::command]
-pub async fn students_count_new() -> Result<usize, String> {
+pub async fn students_count_new(school_id: String) -> Result<usize, String> {
     let client = reqwest::Client::builder()
         .build()
         .map_err(|e| e.to_string())?;
 
     let resp = client
-        .get(format!("{}/students/countNewStudents", *API_BASE))
+        .get(format!("{}/students/{}/countNewStudents", *API_BASE, school_id))
         .send()
         .await
         .map_err(|e| format!("Network error: {e}"))?
@@ -167,6 +167,7 @@ struct GqlResp {
 
 #[tauri::command]
 pub async fn students_filter(
+    school_id: String,
     name: Option<String>,
     id: Option<String>,
     group: Option<String>,
@@ -180,8 +181,8 @@ pub async fn students_filter(
         .map_err(|e| e.to_string())?;
 
     let query = r#"
-      query StudentsFilter($name: String, $id: String, $group: String, $semester: String, $career: String, $shift: String) {
-        studentsFilter(name: $name, id: $id, group: $group, semester: $semester, career: $career, shift: $shift) {
+            query StudentsFilter($schoolId: String!, $name: String, $id: String, $group: String, $semester: String, $career: String, $shift: String) {
+                studentsFilter(schoolId: $schoolId, name: $name, id: $id, group: $group, semester: $semester, career: $career, shift: $shift) {
           id
           name
           career
@@ -198,6 +199,7 @@ pub async fn students_filter(
     "#;
 
     let variables = json!({
+        "schoolId": school_id,
         "name": name,
         "id": id,
         "group": group,
@@ -240,15 +242,15 @@ struct GqlRespStudent {
 }
 
 #[tauri::command]
-pub async fn student_detail(id: String) -> Result<Student, String> {
+pub async fn student_detail(school_id: String, id: String) -> Result<Student, String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
         .map_err(|e| e.to_string())?;
 
     let query = r#"
-      query Student($id: String!) {
-        student(id: $id) {
+            query Student($schoolId: String!, $id: String!) {
+                student(schoolId: $schoolId, id: $id) {
           id
           name
           career
@@ -265,7 +267,7 @@ pub async fn student_detail(id: String) -> Result<Student, String> {
       }
     "#;
 
-    let variables = json!({ "id": id });
+    let variables = json!({ "schoolId": school_id, "id": id });
 
     let resp = client
         .post(format!("{}/graphql", *API_BASE))
@@ -316,13 +318,13 @@ pub async fn student_detail(id: String) -> Result<Student, String> {
 // Student report management commands
 // ------------------------------------------------------------------------------
 #[tauri::command]
-pub async fn student_report_create(id: String, report: Report) -> Result<(), String> {
+pub async fn student_report_create(school_id: String, id: String, report: Report) -> Result<(), String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
         .map_err(|e| e.to_string())?;
 
-    let url = format!("{}/students/addReport", *API_BASE);
+    let url = format!("{}/students/{}/addReport", *API_BASE, school_id);
     let resp = client
         .post(&url)
         .json(&json!({
@@ -350,12 +352,12 @@ pub async fn student_report_create(id: String, report: Report) -> Result<(), Str
 }
 
 #[tauri::command]
-pub async fn student_report_delete(id: String, at: i64) -> Result<(), String> {
+pub async fn student_report_delete(school_id: String, id: String, at: i64) -> Result<(), String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
         .map_err(|e| e.to_string())?;  
-    let url = format!("{}/students/deleteReport", *API_BASE);
+    let url = format!("{}/students/{}/deleteReport", *API_BASE, school_id);
     let resp = client
         .post(&url)
         .json(&json!({
@@ -371,13 +373,13 @@ pub async fn student_report_delete(id: String, at: i64) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn student_report_update(id: String, at: i64, report: Report) -> Result<(), String> {
+pub async fn student_report_update(school_id: String, id: String, at: i64, report: Report) -> Result<(), String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
         .map_err(|e| e.to_string())?;
 
-    let url = format!("{}/students/updateReport", *API_BASE);
+    let url = format!("{}/students/{}/updateReport", *API_BASE, school_id);
     let resp = client
         .post(&url)
         .json(&json!({
@@ -423,6 +425,7 @@ fn safe_name(s: &str) -> String {
 pub async fn qr_zip_generate(
     window: tauri::Window,                // to emit progress events
     base_url: String,
+    school_id: String,
     students: Vec<StudentBrief>,
     fmt: String,
     size: u32,
@@ -463,11 +466,11 @@ pub async fn qr_zip_generate(
 
     for (idx, s) in students.into_iter().enumerate() {
         let url = format!(
-            "{}/{}",
+            "{}/{}/{}",
             base_url.trim_end_matches('/'),
+            school_id.trim_matches('/'),
             s.id.trim_start_matches('/')
         );
-        let name_part = s.name.as_deref().unwrap_or("");
         let file_name = format!("{}.{}", safe_name(&s.id), sfx);
 
         let code = QrCode::with_error_correction_level(url.as_bytes(), EcLevel::M)
@@ -523,6 +526,7 @@ pub struct ImportSummary {
 
 // Helper to POST a single Excel file (base64) to an endpoint
 async fn post_excel(
+	school_id: String,
     endpoint: &str,
     excel_b64: String,
     filename: &str,
@@ -538,7 +542,7 @@ async fn post_excel(
 
     let form = multipart::Form::new().part("file", part);
 
-    let url = format!("{}/students/import/{}", *API_BASE, endpoint);
+    let url = format!("{}/students/{}/import/{}", *API_BASE, school_id, endpoint);
 
     let client = reqwest::Client::new();
     let resp = client
@@ -574,11 +578,11 @@ async fn post_excel(
 }
 
 #[tauri::command]
-pub async fn students_import_new(excel_base64: String) -> Result<ImportSummary, String> {
-    post_excel("new", excel_base64, "new_students.xlsx").await
+pub async fn students_import_new(school_id: String, excel_base64: String) -> Result<ImportSummary, String> {
+    post_excel(school_id, "new", excel_base64, "new_students.xlsx").await
 }
 
 #[tauri::command]
-pub async fn students_import_update(excel_base64: String) -> Result<ImportSummary, String> {
-    post_excel("update", excel_base64, "update_students.xlsx").await
+pub async fn students_import_update(school_id: String, excel_base64: String) -> Result<ImportSummary, String> {
+    post_excel(school_id, "update", excel_base64, "update_students.xlsx").await
 }

@@ -9,19 +9,22 @@ export default function PanelHome() {
   const { user } = useAuth();
 
   return (
-    <div className="px-6 text-white w-full">
+    <div className="w-full px-3 py-3 text-white sm:px-6 sm:py-4">
       { user?.admin || user?.permissions.includes("Maestro") ? (
         <>
           <StudentsStats />
-          <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-            <div className="h-full">
+
+          <div className="mt-5 grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.85fr)]">
+            <div className="min-w-0 h-full">
               <OccupancyPie />
             </div>
-            <div className="h-full">
-              <TodayActivityBar />
+            <div className="min-w-0 h-full">
+              <EntranceLogs />
             </div>
           </div>
-          <EntranceLogs />
+          <div className="mt-5 min-w-0">
+            <TodayActivityBar />
+          </div>
         </>
       ) : null }
     </div>

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 static API_BASE: Lazy<String> = Lazy::new(|| {
-    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://85.239.243.19:1420".to_string())
+    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://localhost:1420".to_string())
 });
 
 #[tauri::command]
@@ -24,7 +24,7 @@ pub struct AppUriResp {
 
 #[tauri::command]
 pub async fn app_get_uri(id: String) -> Result<String, String> {
-    let url = format!("{}/getUri?id={}", *API_BASE, id);
+    let url = format!("{}/schools/{}/getUri", *API_BASE, id);
     let client = Client::new();
     let resp = client.get(url).send().await.map_err(|e| format!("Network: {e}"))?;
     let status = resp.status();
@@ -44,9 +44,9 @@ pub struct UpdateAppClassDto {
 
 #[tauri::command]
 pub async fn app_update_uri(id: String, newRedirectUri: String) -> Result<(), String> {
-    let url = format!("{}/updateUri", *API_BASE);
+    let url = format!("{}/schools/updateUri", *API_BASE);
     let client = Client::new();
-    let payload = json!({ "id": id, "new_redirect_uri": newRedirectUri });
+    let payload = json!({ "id": id, "app_uri": newRedirectUri });
     let resp = client
         .post(url)
         .json(&payload)

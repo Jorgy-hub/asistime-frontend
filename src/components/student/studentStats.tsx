@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { subscribeRealtimeEvent, type RealtimeUnsubscribe } from "@/lib/realtime";
 import { useRouter } from "next/navigation";
+import { getStudentCounts } from "@/services/web/students";
+import { useAuth } from "@/context/AuthProvider";
 
 function useCountUp(target: number, duration = 500) {
   const [display, setDisplay] = useState(0);
@@ -80,14 +82,14 @@ const Card = ({
   router: ReturnType<typeof useRouter>;
 }) => (
   <div
-    className="relative rounded-md flex items-center gap-4 bg-zinc-900 p-4 shadow-md overflow-hidden cursor-pointer hover:bg-zinc-800 transition"
+    className="relative flex min-h-[112px] min-w-0 flex-col items-start justify-between gap-2 overflow-hidden rounded-lg bg-zinc-900 p-3 shadow-md transition hover:-translate-y-0.5 hover:bg-zinc-800 sm:min-h-[96px] sm:flex-row sm:items-center sm:gap-4 sm:p-4"
     onClick={() => router.push(href)}
   >
     <span className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${color} rounded-l-md`} />
-    <div className="relative flex items-center justify-center">{icon}</div>
-    <div className="flex flex-col">
-      <h3 className="text-[11px] font-semibold tracking-wide text-zinc-400 uppercase">{title}</h3>
-      <p className="text-2xl font-bold text-white mt-1 leading-none">{value}</p>
+    <div className="relative flex origin-left scale-75 items-center justify-center sm:scale-100">{icon}</div>
+    <div className="flex min-w-0 flex-col">
+      <h3 className="text-[10px] font-semibold uppercase leading-tight tracking-wide text-zinc-400 sm:text-[11px]">{title}</h3>
+      <p className="mt-1 text-2xl font-bold leading-none text-white sm:text-3xl">{value}</p>
     </div>
   </div>
 );
@@ -95,7 +97,7 @@ const Card = ({
 const CardContainer = ({ children }: { children: React.ReactNode }) => (
   <div
     className="
-      grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-3 w-full
+      grid grid-cols-2 gap-3 mt-1 w-full sm:gap-4 lg:grid-cols-4
       lg:[&>div:not(:last-child)]:border-r lg:[&>div:not(:last-child)]:border-zinc-800
     "
   >
@@ -104,6 +106,8 @@ const CardContainer = ({ children }: { children: React.ReactNode }) => (
 );
 
 export default function StudentsStats() {
+  const { user } = useAuth();
+  const schoolId = String(user?.school_id || "");
   // raw targets from backend
   const [loggedStudents, setLoggedStudents] = useState<number>(0);
   const [totalStudents, setTotalStudents] = useState<number>(0);
@@ -117,34 +121,38 @@ export default function StudentsStats() {
   const displayOutside = useCountUp(outsideStudents, 500);
 
   const router = useRouter();
-  const unsubsRef = useRef<UnlistenFn[]>([]);
+  const unsubsRef = useRef<RealtimeUnsubscribe[]>([]);
 
   useEffect(() => {
     const setup = async () => {
-      try {
-        const [inside, total, newCount, outside] = await Promise.all([
-          invoke<number>("students_count_currently_inside"),
-          invoke<number>("students_count_total"),
-          invoke<number>("students_count_new"),
-          invoke<number>("students_count_currently_outside"),
-        ]);
+      const isTauri = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__;
 
-        setLoggedStudents(typeof inside === "number" ? inside : 0);
-        setTotalStudents(typeof total === "number" ? total : 0);
-        setNewStudents(typeof newCount === "number" ? newCount : 0);
-        setOutsideStudents(typeof outside === "number" ? outside : 0);
+      try {
+        const counts = isTauri
+          ? await Promise.all([
+              invoke<number>("students_count_currently_inside", { schoolId }),
+              invoke<number>("students_count_total", { schoolId }),
+              invoke<number>("students_count_new", { schoolId }),
+              invoke<number>("students_count_currently_outside", { schoolId }),
+            ]).then(([inside, total, newCount, outside]) => ({ inside, total, newCount, outside }))
+          : schoolId ? await getStudentCounts(schoolId) : { inside: 0, total: 0, newCount: 0, outside: 0 };
+
+        setLoggedStudents(typeof counts.inside === "number" ? counts.inside : 0);
+        setTotalStudents(typeof counts.total === "number" ? counts.total : 0);
+        setNewStudents(typeof counts.newCount === "number" ? counts.newCount : 0);
+        setOutsideStudents(typeof counts.outside === "number" ? counts.outside : 0);
       } catch (e) {
         console.error("Failed to load initial counts:", e);
       }
 
-      // subscribe to live count updates (support multiple unsubs)
+      // Subscribe to live count updates in Tauri or through Socket.IO on web.
       const subs = await Promise.all([
-        listen("student:count_currently_inside", (event) => {
-          const payload = event.payload as { count: number };
+        subscribeRealtimeEvent<{ schoolId: string; count: number }>("student:count_currently_inside", (payload) => {
+          if (payload.schoolId !== schoolId) return;
           if (typeof payload.count === "number") setLoggedStudents(payload.count);
         }),
-        listen("student:count_currently_outside", (event) => {
-          const payload = event.payload as { count: number };
+        subscribeRealtimeEvent<{ schoolId: string; count: number }>("student:count_currently_outside", (payload) => {
+          if (payload.schoolId !== schoolId) return;
           if (typeof payload.count === "number") setOutsideStudents(payload.count);
         }),
       ]);
@@ -156,7 +164,7 @@ export default function StudentsStats() {
       unsubsRef.current.forEach((u) => u());
       unsubsRef.current = [];
     };
-  }, []);
+  }, [schoolId]);
 
   return (
     <CardContainer>

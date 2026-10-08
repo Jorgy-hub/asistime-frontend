@@ -3,7 +3,7 @@ use serde_json::json;
 use once_cell::sync::Lazy;
 
 static API_BASE: Lazy<String> = Lazy::new(|| {
-    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://85.239.243.19:1420".to_string())
+    std::env::var("API_BASE_URL").unwrap_or_else(|_| "http://localhost:1420".to_string())
 });
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -13,6 +13,7 @@ pub struct User {
     pub admin: bool,
     pub refresh_token: Option<String>,
     pub permissions: Vec<String>,
+    pub school_id: Option<String>,
 }
 
 #[tauri::command]

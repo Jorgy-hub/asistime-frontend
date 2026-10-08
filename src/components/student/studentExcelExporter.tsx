@@ -161,12 +161,10 @@ export default function ExcelExporter({ student, logsAll, logsFiltered, filename
       a.click();
       a.remove();
 
-      // Safari fallback: open in a new tab if no download happened
+      // Keep the object URL alive long enough for the browser to start the download.
       setTimeout(() => {
         URL.revokeObjectURL(url);
-        // Heuristic: if still on same page and Safari blocked download, open new tab
-        window.open(url, "_blank");
-      }, 50);
+      }, 1000);
 
       return true;
     } catch (e) {

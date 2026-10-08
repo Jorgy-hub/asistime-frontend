@@ -4,26 +4,34 @@ import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { subscribeRealtimeEvent, type RealtimeUnsubscribe } from "@/lib/realtime";
+import { getStudentCounts } from "@/services/web/students";
+import { useAuth } from "@/context/AuthProvider";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 type Counts = { total: number; inside: number; outside: number };
 
 export default function OccupancyPie() {
+  const { user } = useAuth();
+  const schoolId = String(user?.school_id || "");
   const [counts, setCounts] = useState<Counts>({ total: 0, inside: 0, outside: 0 });
   const [err, setErr] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const unsubsRef = useRef<UnlistenFn[]>([]);
+  const unsubsRef = useRef<RealtimeUnsubscribe[]>([]);
 
   const load = useCallback(async () => {
     setErr(null);
     try {
-      const [total, inside, outsideRaw] = await Promise.all([
-        invoke<number>("students_count_total"),
-        invoke<number>("students_count_currently_inside"),
-        invoke<number>("students_count_currently_outside").catch(() => undefined as unknown as number),
-      ]);
+      const isTauri = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__;
+      const counts = isTauri
+        ? await Promise.all([
+            invoke<number>("students_count_total", { schoolId }),
+            invoke<number>("students_count_currently_inside", { schoolId }),
+            invoke<number>("students_count_currently_outside", { schoolId }).catch(() => undefined),
+          ]).then(([total, inside, outside]) => ({ total, inside, outside }))
+        : schoolId ? await getStudentCounts(schoolId) : { total: 0, inside: 0, outside: 0 };
+      const { total, inside, outside: outsideRaw } = counts;
       const outside =
         typeof outsideRaw === "number" && !Number.isNaN(outsideRaw)
           ? outsideRaw
@@ -37,7 +45,7 @@ export default function OccupancyPie() {
       setErr(typeof e === "string" ? e : e?.message || "Error");
       setCounts({ total: 0, inside: 0, outside: 0 });
     }
-  }, []);
+  }, [schoolId]);
 
   useEffect(() => {
     load();
@@ -46,7 +54,7 @@ export default function OccupancyPie() {
       const names = ["student:logged"];
       const unsubs = await Promise.all(
         names.map((n) =>
-          listen(n, () => {
+          subscribeRealtimeEvent(n, () => {
             if (debounceRef.current) clearTimeout(debounceRef.current);
             debounceRef.current = setTimeout(() => load(), 200);
           })
@@ -85,15 +93,14 @@ export default function OccupancyPie() {
   return (
     <div className="w-full h-full">
       {/* Card */}
-      <div className="rounded-md bg-zinc-900 p-4 h-full min-h-[26rem] sm:min-h-[28rem] lg:min-h-[30rem] flex flex-col overflow-hidden">
-        <div className="text-sm font-semibold tracking-wide text-zinc-400 mb-4">
-          DISTRIBUCION ACTUAL
+      <div className="flex h-full min-h-[18rem] flex-col overflow-hidden rounded-md bg-zinc-900 p-4 sm:min-h-[20rem] lg:min-h-[22rem]">
+        <div className="mb-3 flex items-center justify-between text-sm font-semibold tracking-wide text-zinc-400">
+          <span>DISTRIBUCION ACTUAL</span>
+          <span className="text-zinc-500" aria-hidden="true">⋮</span>
         </div>
 
-        {/* Stack: pie on top, numbers below (centered) */}
-        <div className="flex-1 min-h-0 flex flex-col items-center gap-4">
-          {/* Pie size matches bar heights */}
-          <div className="w-64 h-64 sm:w-72 sm:h-72 lg:w-80 lg:h-80 cursor-pointer">
+        <div className="flex min-h-0 flex-1 flex-row items-center justify-center gap-3 sm:gap-8 lg:gap-12">
+          <div className="h-32 w-32 shrink-0 cursor-pointer sm:h-64 sm:w-64 lg:h-72 lg:w-72">
             <Doughnut
               data={chartData}
               options={{
@@ -107,24 +114,24 @@ export default function OccupancyPie() {
             />
           </div>
 
-          {/* Numbers below, constrained and centered */}
-          <div className="w-full max-w-[320px] px-2 space-y-2 text-sm lg:text-base">
+          <div className="w-full max-w-[170px] space-y-2 text-sm sm:max-w-[260px] sm:space-y-4 sm:text-base">
+            <div className="mb-2 text-xs uppercase tracking-wide text-zinc-500 sm:mb-3 sm:text-sm">Estudiantes</div>
             <div className="flex items-center justify-between">
-              <span className="text-zinc-400">Total</span>
-              <span className="text-zinc-100 tabular-nums">{counts.total}</span>
+              <span className="flex items-center gap-2 text-zinc-400"><span className="h-2 w-2 rounded-full bg-zinc-300 sm:h-2.5 sm:w-2.5" />Total</span>
+              <span className="font-semibold tabular-nums text-zinc-100 sm:text-lg">{counts.total}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-zinc-400">Dentro</span>
-              <span className="text-emerald-300 tabular-nums">{counts.inside}</span>
+              <span className="flex items-center gap-2 text-zinc-400"><span className="h-2 w-2 rounded-full bg-emerald-400 sm:h-2.5 sm:w-2.5" />Dentro</span>
+              <span className="font-semibold tabular-nums text-emerald-300 sm:text-lg">{counts.inside}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-zinc-400">Fuera</span>
-              <span className="text-rose-300 tabular-nums">{counts.outside}</span>
+              <span className="flex items-center gap-2 text-zinc-400"><span className="h-2 w-2 rounded-full bg-rose-400 sm:h-2.5 sm:w-2.5" />Fuera</span>
+              <span className="font-semibold tabular-nums text-rose-300 sm:text-lg">{counts.outside}</span>
             </div>
             {Math.max(counts.total - counts.inside - counts.outside, 0) > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-zinc-400">Ausentes</span>
-                <span className="text-zinc-300 tabular-nums">
+                <span className="flex items-center gap-2 text-zinc-400"><span className="h-2 w-2 rounded-full bg-zinc-500" />Ausentes</span>
+                <span className="font-semibold tabular-nums text-zinc-300">
                   {Math.max(counts.total - counts.inside - counts.outside, 0)}
                 </span>
               </div>

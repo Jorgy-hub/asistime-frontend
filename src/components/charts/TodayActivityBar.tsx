@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { subscribeRealtimeEvent, type RealtimeUnsubscribe } from "@/lib/realtime";
 import { invoke } from "@tauri-apps/api/core";
 import { Line } from "react-chartjs-2";
 import {
@@ -15,6 +15,8 @@ import {
   Legend,
 } from "chart.js";
 import type { ChartData, ChartDataset, ScriptableContext } from "chart.js";
+import { getFilteredStudents } from "@/services/web/students";
+import { useAuth } from "@/context/AuthProvider";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
@@ -56,6 +58,8 @@ function smooth(arr: number[]) {
 }
 
 export default function TodayActivityBar() {
+  const { user } = useAuth();
+  const schoolId = String(user?.school_id || "");
   const [entries, setEntries] = useState<number[]>(() => Array(24).fill(0));
   const [exits, setExits] = useState<number[]>(() => Array(24).fill(0));
   const [err, setErr] = useState<string | null>(null);
@@ -68,19 +72,23 @@ export default function TodayActivityBar() {
 
   // listeners
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const unsubsRef = useRef<UnlistenFn[]>([]);
+  const unsubsRef = useRef<RealtimeUnsubscribe[]>([]);
 
   const fetchForDate = useCallback(async (date: Date) => {
     try {
       setErr(null);
-      const students = await invoke<Student[]>("students_filter", {
-        name: null,
-        id: null,
-        group: null,
-        semester: null,
-        career: null,
-        shift: null,
-      });
+      const isTauri = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__;
+      const students = isTauri
+        ? await invoke<Student[]>("students_filter", {
+          schoolId,
+            name: null,
+            id: null,
+            group: null,
+            semester: null,
+            career: null,
+            shift: null,
+          })
+        : schoolId ? await getFilteredStudents({ schoolId }) : [];
 
       const start = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
       const end = start + 86_400_000;
@@ -108,7 +116,7 @@ export default function TodayActivityBar() {
       setEntries(Array(24).fill(0));
       setExits(Array(24).fill(0));
     }
-  }, []);
+  }, [schoolId]);
 
   useEffect(() => {
     fetchForDate(selectedDay.date);
@@ -125,7 +133,7 @@ export default function TodayActivityBar() {
       const names = ["student:logged"];
       const unsubs = await Promise.all(
         names.map((n) =>
-          listen(n, () => {
+          subscribeRealtimeEvent(n, () => {
             if (debounceRef.current) clearTimeout(debounceRef.current);
             debounceRef.current = setTimeout(() => fetchForDate(new Date()), 200);
           })
@@ -208,7 +216,7 @@ export default function TodayActivityBar() {
         </div>
 
         {/* Day selector */}
-        <div className="mb-4 flex gap-2 overflow-x-auto no-scrollbar pr-1 -mr-1">
+        <div className="mb-4 flex gap-2 overflow-x-auto no-scrollbar pr-1 -mr-1 items-center">
           {days.map((d, i) => {
             const active = i === selectedIdx;
             return (

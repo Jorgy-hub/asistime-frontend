@@ -126,3 +126,205 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   outline: none;
   box-shadow: none;
 }
+
+html.theme-light body {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+html.theme-light .bg-zinc-950 { background-color: #f8fafc; }
+html.theme-light .bg-zinc-900 { background-color: #ffffff; }
+html.theme-light .bg-zinc-800 { background-color: #f1f5f9; }
+html.theme-light .bg-zinc-800\/60 { background-color: rgba(241, 245, 249, 0.9); }
+html.theme-light .bg-zinc-900\/70 { background-color: rgba(255, 255, 255, 0.85); }
+html.theme-light .bg-zinc-950\/40 { background-color: rgba(248, 250, 252, 0.8); }
+html.theme-light .text-white { color: #1e293b; }
+html.theme-light .text-zinc-100,
+html.theme-light .text-zinc-200 { color: #334155; }
+html.theme-light .text-zinc-300,
+html.theme-light .text-zinc-400 { color: #64748b; }
+html.theme-light .text-zinc-500 { color: #94a3b8; }
+html.theme-light .border-zinc-700,
+html.theme-light .border-zinc-800 { border-color: #e2e8f0; }
+html.theme-light .hover\:bg-zinc-800:hover { background-color: #f1f5f9; }
+html.theme-light .hover\:bg-zinc-700:hover { background-color: #e2e8f0; }
+
+html.theme-light .from-zinc-900, html.theme-light .to-zinc-950 { background-image: linear-gradient(to right, #ffffff, #f8fafc); }
+
+/* Light dashboard treatment: cool canvas, white surfaces, blue accents. */
+html.theme-light [data-panel-shell] {
+  background: #e8edf5;
+}
+
+html.theme-light [data-panel-content] {
+  background: #e8edf5;
+}
+
+html.theme-light .bg-zinc-900 {
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 8px 22px rgba(71, 85, 105, 0.08);
+}
+
+html.theme-light .bg-zinc-950 {
+  border-color: #e2e8f0;
+}
+
+
+html.theme-light .hover\:bg-zinc-800:hover {
+  background-color: #f8fafc;
+}
+
+html.theme-light .hover\:bg-zinc-700:hover {
+  background-color: #eef2f7;
+}
+
+/* Student screens need denser, readable light surfaces than the dashboard shell. */
+html.theme-light [data-student-list] .bg-zinc-950,
+html.theme-light [data-student-list] .bg-zinc-900,
+html.theme-light [data-student-detail] .bg-zinc-950,
+html.theme-light [data-student-detail] .bg-zinc-900 {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+  color: #1e293b;
+}
+
+html.theme-light [data-student-list] .bg-zinc-900\/70 {
+  background-color: #f8fafc;
+}
+
+html.theme-light [data-student-list] input,
+html.theme-light [data-student-list] select {
+  background-color: #ffffff;
+  border: 1px solid #dbe3ee;
+  color: #1e293b;
+}
+
+html.theme-light [data-student-list] input::placeholder {
+  color: #94a3b8;
+}
+
+html.theme-light [data-student-list] .absolute.z-50 {
+  background-color: rgba(255, 255, 255, 0.98);
+  border-color: #dbe3ee;
+  box-shadow: 0 14px 30px rgba(71, 85, 105, 0.16);
+}
+
+html.theme-light [data-student-list] .hover\:bg-zinc-800\/80:hover {
+  background-color: #f1f5f9;
+}
+
+html.theme-light [data-student-list] .bg-zinc-700 {
+  background-color: #e2e8f0;
+  color: #334155;
+}
+
+html.theme-light [data-student-detail] .bg-zinc-950\/80 {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+html.theme-light [data-student-detail] .bg-black {
+  background-color: #e2e8f0;
+  color: #334155;
+}
+
+html.theme-light [data-student-detail] .text-white {
+  color: #1e293b;
+}
+
+/* Student detail light theme: replace flat gray blocks with soft sky tones. */
+html.theme-light [data-student-detail] .bg-zinc-800\/40 {
+  background-color: #eaf6ff;
+  border-color: #c7e7fa;
+}
+
+html.theme-light [data-student-detail] .bg-zinc-950\/30 {
+  background-color: #f2f9ff;
+}
+
+html.theme-light [data-student-detail] .bg-zinc-900 {
+  background-color: #ffffff;
+  border-color: #d8edf9;
+  box-shadow: 0 8px 24px rgba(56, 128, 168, 0.08);
+}
+
+html.theme-light [data-student-detail] .bg-zinc-800 {
+  background-color: #e8f5fd;
+}
+
+html.theme-light [data-student-detail] .border-zinc-800,
+html.theme-light [data-student-detail] .border-zinc-700 {
+  border-color: #d8edf9;
+}
+
+html.theme-light [data-student-detail] .text-zinc-400 {
+  color: #5f7991;
+}
+
+html.theme-light [data-student-detail] .text-zinc-500 {
+  color: #7893aa;
+}
+
+html.theme-light [data-student-detail] .divide-zinc-800 > :not([hidden]) ~ :not([hidden]),
+html.theme-light [data-student-detail] .border-t.border-zinc-800 {
+  border-color: #cfe8f7;
+}
+
+html.theme-light [data-student-detail] .bg-zinc-950\/30 {
+  background-color: #f3faff;
+}
+
+html.theme-light [data-student-detail] .bg-zinc-900\/40 {
+  background-color: #edf8ff;
+}
+
+html.theme-light [data-student-list] .bg-zinc-900\/40,
+html.theme-light [data-student-list] .bg-zinc-900\/70 {
+  background-color: #f3faff;
+}
+
+html.theme-light [data-student-list] .bg-zinc-800\/40 {
+  background-color: #e9f6fe;
+}
+
+html.theme-light [data-student-list] .divide-zinc-800 > :not([hidden]) ~ :not([hidden]),
+html.theme-light [data-student-list] .border-zinc-800 {
+  border-color: #cfe8f7;
+}
+
+html.theme-light [data-student-list] .bg-zinc-800 {
+  background-color: #e4f3fc;
+}
+
+/* Remove dark row accents/separators from student screens in light mode. */
+html.theme-light [data-student-list] li > a > span.absolute {
+  background-image: none;
+  background-color: #b9e3f8;
+}
+
+html.theme-light [data-student-list] li {
+  border-color: #cfe8f7;
+}
+
+html.theme-light [data-student-detail] ul.divide-zinc-800 > li,
+html.theme-light [data-student-detail] .border-t.border-zinc-800 {
+  border-color: #cfe8f7;
+}
+
+html.theme-light [data-sidebar-logo] {
+  filter: none !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal;
+}
+
+html.theme-light [data-student-detail] .text-zinc-400,
+html.theme-light [data-student-list] .text-zinc-400 {
+  color: #64748b;
+}
+
+html.theme-light .logo {
+
+}
+
+.global-white-text {
+  color: #ffffff;
+}

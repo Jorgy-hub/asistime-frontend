@@ -1,5 +1,21 @@
 import { invoke } from "@tauri-apps/api/core";
 
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
+const isTauri = () => typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__);
+
+async function webRequest(path: string, init?: RequestInit) {
+  if (!apiBaseUrl) throw new Error("NEXT_PUBLIC_API_BASE_URL no está configurada");
+  const response = await fetch(`${apiBaseUrl}${path}`, init);
+  const text = await response.text();
+  let body: any = null;
+  try { body = text ? JSON.parse(text) : null; } catch { body = text; }
+  if (!response.ok) {
+    const message = typeof body === "object" && body?.detail ? body.detail : text;
+    throw new Error(message || `Request failed: ${response.status}`);
+  }
+  return body;
+}
+
 export type User = {
   id?: string | number;
   username: string;
@@ -7,6 +23,7 @@ export type User = {
   admin: boolean;
   permissions: string[];
   refresh_token?: string | null;
+  school_id?: string | null;
 };
 
 export type CreateUserInput = {
@@ -14,10 +31,12 @@ export type CreateUserInput = {
   password: string;
   admin: boolean;
   permissions: string[];
+  school_id?: string | null;
 };
 
 export async function listUsers(): Promise<User[]> {
-  return await invoke<User[]>("list_users");
+  if (isTauri()) return await invoke<User[]>("list_users");
+  return await webRequest("/user/all");
 }
 
 export async function createUser(input: CreateUserInput): Promise<void> {
@@ -27,13 +46,18 @@ export async function createUser(input: CreateUserInput): Promise<void> {
     admin: input.admin,
     permissions: input.permissions,
     refresh_token: null,
+    school_id: input.school_id,
   };
-  await invoke("create_user", { user });
+  if (isTauri()) {
+    await invoke("create_user", { user });
+  } else {
+    await webRequest("/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(user) });
+  }
 }
 
 export async function updateUser(
   id: string | number,
-  input: { username: string; password: string; admin: boolean; permissions: string[]; refresh_token?: string | null }
+  input: { username: string; password: string; admin: boolean; permissions: string[]; refresh_token?: string | null; school_id?: string | null }
 ): Promise<void> {
   const user: User = {
     username: input.username,
@@ -41,10 +65,19 @@ export async function updateUser(
     admin: input.admin,
     permissions: input.permissions,
     refresh_token: input.refresh_token ?? null,
+    school_id: input.school_id,
   };
-  await invoke("update_user", { user });
+  if (isTauri()) {
+    await invoke("update_user", { user });
+  } else {
+    await webRequest("/auth/update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(user) });
+  }
 }
 
 export async function deleteUser(username: string): Promise<void> {
-  await invoke("delete_user", { username });
+  if (isTauri()) {
+    await invoke("delete_user", { username });
+  } else {
+    await webRequest("/auth/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username }) });
+  }
 }

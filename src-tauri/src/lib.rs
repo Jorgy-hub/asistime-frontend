@@ -14,6 +14,7 @@ use tauri_plugin_updater::UpdaterExt;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let _ = dotenvy::dotenv();
+    let _ = dotenvy::from_filename(concat!(env!("CARGO_MANIFEST_DIR"), "/../.env"));
 
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminUsersManager from "../../../components/admin/AdminUsersManager";
 import StudentsExcelImporter from "@/components/admin/StudentsExcelImporter";
-import { invoke } from "@tauri-apps/api/core";
+import { getAppUri, updateAppUri } from "@/lib/appUriApi";
 
 const APP_ID = "prepa3" as const;
 const DEFAULT_URL = "https://drive.google.com/file/d/1iMoVrEppQ8jSB-5XJxSEYxKl2s5BETRg/view?usp=sharing" as const;
@@ -32,7 +32,7 @@ export default function AdminPage() {
       setLoadingUri(true);
       setUriMsg(null);
       try {
-        const current = await invoke<string>("app_get_uri", { id: APP_ID });
+        const current = await getAppUri(user.school_id || APP_ID);
         setPrevUri(current || "");
         setUri(current || "");
       } catch (e: any) {
@@ -50,10 +50,7 @@ export default function AdminPage() {
     setSavingUri(true);
     setUriMsg(null);
     try {
-      await invoke("app_update_uri", {
-        id: "prepa3",
-        newRedirectUri: uri, 
-      });
+      await updateAppUri(user.school_id || APP_ID, uri);
       setPrevUri(uri);
       setUriMsg("URI actualizado correctamente.");
     } catch (e: any) {
@@ -77,7 +74,7 @@ export default function AdminPage() {
               <label className="block text-[11px] uppercase tracking-wide text-zinc-400 mb-1">App ID</label>
               <input
                 className="w-full bg-zinc-950 rounded-lg px-3 py-2 text-sm"
-                value={APP_ID}
+                value={user.school_id || "None"}
                 disabled
               />
               <div className="mt-1 text-[11px] text-zinc-500">Fijo para esta app.</div>
@@ -120,7 +117,7 @@ export default function AdminPage() {
                 setLoadingUri(true);
                 setUriMsg(null);
                 try {
-                  const current = await invoke<string>("app_get_uri", { id: APP_ID });
+                  const current = await getAppUri(user.school_id || APP_ID);
                   setPrevUri(current || "");
                   setUri(current || "");
                 } catch (e: any) {
@@ -137,13 +134,9 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
-
-      <div className="p-2">
-        <h1 className="text-xl font-semibold text-zinc-100 mb-2">Importar Estudiantes</h1>
-        <StudentsExcelImporter />
-      </div>
-
+      
       <AdminUsersManager token={token} />
+      <div className="p-2"><StudentsExcelImporter /></div>
     </div>
   );
 }

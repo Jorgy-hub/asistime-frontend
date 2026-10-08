@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthProvider";
+import { useTheme } from "@/context/ThemeProvider";
 import { usePathname, useRouter } from "next/navigation";
 import React from "react";
 
@@ -17,6 +18,8 @@ const Sidebar = ({ admin = false }: SidebarProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const { setToken, user } = useAuth();
+
+  const { theme, toggleTheme } = useTheme();
 
   // Determine admin from prop or user object
   const isAdmin = admin || !!(user as any)?.admin;
@@ -78,14 +81,14 @@ const Sidebar = ({ admin = false }: SidebarProps) => {
   ];
 
   return (
-    <div className="w-24 h-screen text-white px-4 pt-6 pb-4 bg-zinc-950 flex flex-col">
+    <div className="fixed bottom-0 left-0 right-0 z-50 flex h-16 w-full flex-row items-center justify-between bg-zinc-950 px-3 text-white md:static md:h-screen md:w-24 md:flex-col md:px-4 md:pt-6 md:pb-4">
       {/* Logo */}
-      <div className="-mx-4 px-4 flex justify-center pb-4 mb-4 shrink-0 border-zinc-700">
-        <img src="/images/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
+      <div className="hidden shrink-0 justify-center border-zinc-700 md:-mx-4 md:mb-4 md:flex md:px-4 md:pb-4">
+        <img data-sidebar-logo src={ theme === "dark" ? "/images/logo.png" : "/images/logo-black.png" } alt="Logo" className="h-12 w-12 object-contain" />
       </div>
 
       {/* Centered nav */}
-      <nav className="flex-1 flex flex-col items-center justify-top space-y-4">
+      <nav className="flex flex-1 items-center justify-around gap-2 md:flex-col md:items-center md:justify-start md:space-y-4 ">
         {links
           .filter((l) => !l.hidden)
           .map((link) => {
@@ -98,7 +101,7 @@ const Sidebar = ({ admin = false }: SidebarProps) => {
                 aria-label={link.label}
               >
                 {link.icon}
-                <span className="absolute top-1/2 -translate-y-1/2 left-16 p-2 rounded-md bg-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm whitespace-nowrap z-50">
+                <span className="global-white-text absolute left-16 top-1/2 z-50 hidden -translate-y-1/2 whitespace-nowrap rounded-md bg-zinc-700 p-2 text-sm opacity-0 transition-opacity duration-300 group-hover:opacity-100 md:block">
                   {link.label}
                 </span>
               </button>
@@ -107,7 +110,7 @@ const Sidebar = ({ admin = false }: SidebarProps) => {
       </nav>
 
       {/* Logout pinned bottom */}
-      <div className="mt-4 flex justify-center">
+      <div className="mt-0 flex justify-center md:mt-4">
         <button
           onClick={() => {
             setToken(null);
@@ -120,7 +123,7 @@ const Sidebar = ({ admin = false }: SidebarProps) => {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6A2.25 2.25 0 005.25 5.25v13.5A2.25 2.25 
                      0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
           </svg>
-          <span className="absolute top-1/2 -translate-y-1/2 left-16 p-2 rounded-md bg-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm whitespace-nowrap">
+          <span className="absolute left-16 top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-md bg-zinc-700 p-2 text-sm opacity-0 transition-opacity duration-300 group-hover:opacity-100 md:block global-white-text">
             Logout
           </span>
         </button>

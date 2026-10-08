@@ -4,10 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
+import JSZip from "jszip";
+import QRCode from "qrcode";
+import { getFilteredStudents } from "@/services/web/students";
+import { useAuth } from "@/context/AuthProvider";
 
 type StudentBrief = { id: string; name?: string | null };
 
 export default function GenerateQRCodesButton() {
+  const { user } = useAuth();
+  const schoolId = String(user?.school_id || "");
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(false);
 
@@ -39,6 +45,28 @@ export default function GenerateQRCodesButton() {
     unlistenRef.current = null;
   };
 
+  const isTauriEnv = () =>
+    typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__);
+
+  const getStudents = async (): Promise<StudentBrief[]> => {
+    const rows = isTauriEnv()
+      ? await invoke<StudentBrief[]>("students_filter", {
+          schoolId,
+          name: null,
+          id: null,
+          group: null,
+          semester: null,
+          career: null,
+          shift: null,
+        })
+      : await getFilteredStudents({ schoolId });
+
+    return (rows || []).map((row) => ({
+      id: String(row.id),
+      name: row.name ?? null,
+    }));
+  };
+
   const openModal = async () => {
     setError(null);
     setZipPath(null);
@@ -46,18 +74,63 @@ export default function GenerateQRCodesButton() {
     setOpen(true);
     requestAnimationFrame(() => setVisible(true));
     try {
-      const rows = await invoke<any[]>("students_filter", {
-        name: null,
-        id: null,
-        group: null,
-        semester: null,
-        career: null,
-        shift: null,
-      });
-      setStudentsCount(rows?.length ?? 0);
+      const students = await getStudents();
+      setStudentsCount(students.length);
     } catch {
       setStudentsCount(null);
     }
+  };
+
+  const downloadWebZip = (bytes: Blob, filename: string) => {
+    const url = URL.createObjectURL(bytes);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const generateWebZip = async (students: StudentBrief[]) => {
+    const zip = new JSZip();
+    const extension = fmt === "svg" ? "svg" : "png";
+    const total = students.length;
+
+    setProgStatus("start");
+    setProgTotal(total);
+    setProgCurrent(0);
+
+    for (let index = 0; index < students.length; index += 1) {
+      const student = students[index];
+      const targetUrl = `${baseUrl.trim().replace(/\/+$/, "")}/${schoolId}/${student.id.replace(/^\/+/, "")}`;
+      const filename = `${student.id.replace(/[^a-zA-Z0-9_-]/g, "_")}.${extension}`;
+
+      if (extension === "svg") {
+        const svg = await QRCode.toString(targetUrl, {
+          type: "svg",
+          width: size,
+          errorCorrectionLevel: "M",
+        });
+        zip.file(filename, svg);
+      } else {
+        const dataUrl = await QRCode.toDataURL(targetUrl, {
+          width: size,
+          errorCorrectionLevel: "M",
+          margin: 0,
+        });
+        const imageBytes = await fetch(dataUrl).then((response) => response.arrayBuffer());
+        zip.file(filename, imageBytes);
+      }
+
+      setProgStatus("progress");
+      setProgCurrent(index + 1);
+    }
+
+    const archive = await zip.generateAsync({ type: "blob", compression: "STORE" });
+    downloadWebZip(archive, `Asistime-QRCodes-${new Date().toISOString().replace(/[:.]/g, "-")}.zip`);
+    setProgStatus("done");
+    setZipPath("Descargado por el navegador");
   };
 
   const closeModal = () => {
@@ -94,19 +167,13 @@ export default function GenerateQRCodesButton() {
     resetProgress();
 
     try {
-      const rows = await invoke<any[]>("students_filter", {
-        name: null,
-        id: null,
-        group: null,
-        semester: null,
-        career: null,
-        shift: null,
-      });
-      const students: StudentBrief[] = (rows || []).map((r: any) => ({
-        id: String(r.id),
-        name: r.name ?? null,
-      }));
+      const students = await getStudents();
       if (!students.length) throw new Error("No hay estudiantes.");
+
+      if (!isTauriEnv()) {
+        await generateWebZip(students);
+        return;
+      }
 
       // Listen to progress events
       unlistenRef.current = await listen("qr_zip_progress", (ev) => {
@@ -130,6 +197,7 @@ export default function GenerateQRCodesButton() {
 
       const path = await invoke<string>("qr_zip_generate", {
         baseUrl,
+        schoolId,
         students,
         fmt,
         size,

@@ -1,8 +1,10 @@
 "use client";
 import { invoke } from "@tauri-apps/api/core";
+import { getUser, login } from "../../services/web/auth";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthProvider";
 import { useRouter } from "next/navigation";
+import { useTheme } from "../../context/ThemeProvider"; 
 import ErrorModal from "../../components/modals/error.modal";
 
 export default function LoginPage() {
@@ -19,9 +21,16 @@ export default function LoginPage() {
   const handleLogin = useCallback(
     async (username: string, password: string) => {
       try {
-        const authToken = (await invoke("login", { username, password })) as string;
+        const isTauri = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__;
+        const authToken = isTauri
+          ? (await invoke("login", { username, password })) as string
+          : await login(username, password);
+
         setToken(authToken);
-        const user = await invoke("get_user", { authToken });
+        console.log("Token:", authToken);
+        const user = isTauri
+          ? await invoke("get_user", { authToken })
+          : await getUser(authToken);
         setUser(user);
         router.replace("/panel");
       } catch {

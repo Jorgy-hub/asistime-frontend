@@ -58,7 +58,12 @@ export default function AdminUsersManager({ token }: { token?: string }) {
     setErr(null);
     try {
       const data = await listUsers();
-      setUsers(data);
+      const schoolId = String((currentUser as any)?.school_id || "").trim().toLowerCase();
+      setUsers(
+        schoolId
+          ? data.filter((user) => String(user.school_id || "").trim().toLowerCase() === schoolId)
+          : []
+      );
     } catch (e) {
       setErr(toErrorMessage(e));
       setDebugError(e);
@@ -69,7 +74,7 @@ export default function AdminUsersManager({ token }: { token?: string }) {
 
   useEffect(() => {
     reload();
-  }, []);
+  }, [currentUser]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -238,10 +243,10 @@ export default function AdminUsersManager({ token }: { token?: string }) {
       setSubmitting(false);
       return;
     }
-
+ 
     try {
       if (open === "create") {
-        await createUser({ username, password, admin: form.admin, permissions });
+        await createUser({ username, password, admin: form.admin, permissions, school_id: (currentUser as any)?.school_id || undefined });
         setMessage(`Usuario "${username}" creado`);
       } else if (open === "edit" && editingId != null) {
         await updateUser(editingId, {
@@ -250,6 +255,7 @@ export default function AdminUsersManager({ token }: { token?: string }) {
           admin: form.admin,
           permissions,
           refresh_token: null,
+          school_id: (currentUser as any)?.school_id || null,
         });
         setMessage(`Usuario "${username}" actualizado`);
       }
@@ -324,7 +330,7 @@ export default function AdminUsersManager({ token }: { token?: string }) {
           <table className="min-w-full text-sm">
             <thead className="text-zinc-300">
               <tr>
-                <th className="text-left px-4 py-3 font-medium">Usuario</th>
+                <th className="text-left px-4 py-3 font-medium">Usuarios</th>
                 <th className="text-left px-4 py-3 font-medium">Administrador</th>
                 <th className="text-left px-4 py-3 font-medium">Permisos</th>
                 <th className="text-right px-4 py-3 font-medium">Acciones</th>
@@ -349,7 +355,7 @@ export default function AdminUsersManager({ token }: { token?: string }) {
                 pageItems.map((u, idx) => (
                   <tr
                     key={(u as any).id ?? u.username}
-                    className={`${idx % 2 === 0 ? "bg-zinc-800/40" : "bg-zinc-900/40"} transition-colors hover:bg-zinc-700/60`}
+                    className={`${idx % 2 === 0 ? "bg-zinc-900/70" : "bg-zinc-900"} transition-colors hover:bg-zinc-700/60`}
                   >
                     <td className="px-4 py-3 text-zinc-100">
                       <div className="flex items-center gap-2">

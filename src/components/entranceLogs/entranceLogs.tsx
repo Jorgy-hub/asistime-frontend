@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { subscribeRealtimeEvent, type RealtimeUnsubscribe } from "@/lib/realtime";
+import { useAuth } from "@/context/AuthProvider";
 
 type StudentLogged = {
   id: number;
@@ -22,10 +23,36 @@ function shortenName(name: string, narrow: boolean) {
 }
 
 export default function EntranceLogs() {
+  const { user } = useAuth();
+  const schoolId = String(user?.school_id || "");
   const [logs, setLogs] = useState<StudentLogged[]>([]);
   const [narrow, setNarrow] = useState(false);
-  const unlistenRef = useRef<UnlistenFn | null>(null);
+  const unlistenRef = useRef<RealtimeUnsubscribe | null>(null);
   const seenRef = useRef<Set<string>>(new Set());
+  const restoredSchoolRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!schoolId || restoredSchoolRef.current === schoolId) return;
+
+    restoredSchoolRef.current = schoolId;
+    try {
+      const stored = localStorage.getItem(`asistime:entrance-logs:${schoolId}`);
+      const restored = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(restored)) return;
+
+      setLogs(restored.slice(0, 200));
+      restored.forEach((log: StudentLogged) => {
+        seenRef.current.add(`${log.id}-${log.at}`);
+      });
+    } catch {
+      setLogs([]);
+    }
+  }, [schoolId]);
+
+  useEffect(() => {
+    if (!schoolId || restoredSchoolRef.current !== schoolId) return;
+    localStorage.setItem(`asistime:entrance-logs:${schoolId}`, JSON.stringify(logs.slice(0, 200)));
+  }, [logs, schoolId]);
 
   // Track window width
   useEffect(() => {
@@ -38,9 +65,9 @@ export default function EntranceLogs() {
   useEffect(() => {
     const setup = async () => {
       if (unlistenRef.current) return;
-      unlistenRef.current = await listen("student:logged", (event) => {
-        const payload = event.payload as StudentLogged;
+      unlistenRef.current = await subscribeRealtimeEvent<StudentLogged>("student:logged", (payload) => {
         const key = `${payload.id}-${payload.at}`;
+        if (String((payload as StudentLogged & { schoolId?: string }).schoolId || "") !== schoolId) return;
         if (seenRef.current.has(key)) return;
         seenRef.current.add(key);
         if (seenRef.current.size > 1200) {
@@ -59,14 +86,15 @@ export default function EntranceLogs() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [schoolId]);
 
   return (
-    <div className="mt-8 bg-zinc-900 overflow-hidden shadow-lg rounded-md">
-      <div className="px-4 py-3 text-sm font-semibold tracking-wide text-zinc-400">
-        HISTORIAL DE ENTRADAS
+    <div className="bg-zinc-900 overflow-hidden shadow-lg rounded-md h-full flex flex-col min-h-[18rem] sm:min-h-[20rem] lg:min-h-[22rem]">
+      <div className="flex items-center justify-between px-4 py-3 text-sm font-semibold tracking-wide text-zinc-400">
+        <span>HISTORIAL DE ENTRADAS</span>
+        <span className="text-zinc-500" aria-hidden="true">⋮</span>
       </div>
-      <ul className="max-h-80 overflow-auto">
+      <ul className="min-h-0 flex-1 overflow-auto">
         {logs.length === 0 ? (
           <li className="p-4 text-sm text-zinc-400">No hay ninguna actividad de entrada.</li>
         ) : (
@@ -88,24 +116,27 @@ export default function EntranceLogs() {
             return (
               <li
                 key={`${l.id}-${l.at}-${idx}`}
-                className={`px-4 py-3 text-sm flex items-center justify-between opacity-0 animate-fade-slide ${rowBg} ${hoverBg} transition-colors`}
+                className={`flex items-center gap-3 px-4 py-3 opacity-0 animate-fade-slide ${rowBg} ${hoverBg} transition-colors`}
                 style={{ animationDelay: `${Math.min(idx, 10) * 50}ms` }}
               >
-                <div className="flex items-baseline gap-3 min-w-0">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-400/60 bg-zinc-900 text-xs font-medium text-zinc-300">
+                  {String(l.name || "?").slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
                   <span
-                    className="font-medium text-white truncate max-w-[110px] sm:max-w-[220px] whitespace-nowrap"
+                    className="block truncate text-sm font-medium text-white"
                     title={l.name}
                   >
                     {shortenName(l.name, narrow)}
                   </span>
-                  <code className="text-xs text-zinc-300 bg-zinc-600/60 px-2 py-0.5 rounded truncate max-w-[80px]">
-                    {l.id}
-                  </code>
-                  <code className={`text-xs text-zinc-200 px-2 py-0.5 rounded ${badgeCls}`}>
-                    {badgeText}
-                  </code>
+                  <div className="mt-0.5 flex min-w-0 items-center gap-2">
+                    <code className="truncate text-[11px] text-zinc-400">ID {l.id}</code>
+                    <code className={`rounded px-1.5 py-0.5 text-[10px] text-zinc-200 ${badgeCls}`}>
+                      {badgeText}
+                    </code>
+                  </div>
                 </div>
-                <span className="text-xs text-zinc-400 whitespace-nowrap">
+                <span className="shrink-0 text-right text-[10px] text-zinc-400 whitespace-nowrap">
                   {formatDate(l.at)}
                 </span>
               </li>

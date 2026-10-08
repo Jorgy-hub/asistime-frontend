@@ -7,13 +7,20 @@ import AttendanceCalendar from "@/components/student/studentAttendanceCalendar";
 import StudentLogsPanel from "@/components/student/studentLogs";
 import ExcelExporter from "@/components/student/studentExcelExporter";
 import StudentAttendanceChart from "@/components/student/studentAttendanceChart";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { subscribeRealtimeEvent, type RealtimeUnsubscribe } from "@/lib/realtime";
 import StudentReportsPanel from "@/components/student/studentReportPanel";
 import ReportModal, { type Report } from "@/components/modals/report.modal";
 import { useAuth } from "@/context/AuthProvider";
+import {
+  createStudentReport,
+  deleteStudentReport,
+  getStudentDetail,
+  updateStudentReport,
+} from "@/services/web/students";
 
 type EntranceLog = { at: number; exit: boolean; accepted: boolean };
 type StudentLoggedEvent = {
+  schoolId: string;
   id: string | number;
   name: string;
   at: number;
@@ -100,10 +107,12 @@ export default function StudentDetailPage() {
   const [filteredForExport, setFilteredForExport] = useState<EntranceLog[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const seenRef = useRef<Set<string>>(new Set());
-  const unsubsRef = useRef<UnlistenFn[]>([]);
+  const unsubsRef = useRef<RealtimeUnsubscribe[]>([]);
+  const loadedKeyRef = useRef<string | null>(null);
   const derived = useMemo(() => deriveStatusAndLast(data?.logs), [data]);
 
   const { user } = useAuth();
+  const schoolId = String(user?.school_id || "");
   const [reportOpen, setReportOpen] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
 
@@ -115,9 +124,17 @@ export default function StudentDetailPage() {
       setLoading(false);
       return;
     }
+    const requestKey = `${schoolId}:${id}`;
+    if (loadedKeyRef.current === requestKey) return;
+    loadedKeyRef.current = requestKey;
     setLoading(true);
     setErr(null);
-    invoke<StudentDetail>("student_detail", { id })
+    const isTauri = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__;
+    const detailRequest = isTauri
+      ? invoke<StudentDetail>("student_detail", { schoolId, id })
+      : getStudentDetail(schoolId, id);
+
+    detailRequest
       .then((s) => {
         if (!alive) return;
         setData(s);
@@ -131,8 +148,9 @@ export default function StudentDetailPage() {
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
+      if (loadedKeyRef.current === requestKey) loadedKeyRef.current = null;
     };
-  }, [id]);
+  }, [id, schoolId]);
 
   // Live logs updates
   useEffect(() => {
@@ -140,9 +158,9 @@ export default function StudentDetailPage() {
     let mounted = true;
 
     const setup = async () => {
-      const unsub = await listen("student:logged", (ev) => {
+      const unsub = await subscribeRealtimeEvent<StudentLoggedEvent>("student:logged", (payload) => {
         if (!mounted) return;
-        const payload = ev.payload as StudentLoggedEvent;
+        if (payload.schoolId !== schoolId) return;
         if (String(payload.id) !== String(id)) return;
 
         const key = `${payload.at}-${payload.exit ? "x" : "e"}`;
@@ -166,17 +184,19 @@ export default function StudentDetailPage() {
       unsubsRef.current.forEach((u) => u());
       unsubsRef.current = [];
     };
-  }, [id]);
+  }, [id, schoolId]);
 
   // Create report handler
   const handleCreateReport = async (r: Report) => {
     if (!data) return;
     setSavingReport(true);
     try {
-      await invoke("student_report_create", {
-        id: String(data.id),
-        report: r,
-      });
+      const isTauri = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__;
+      if (isTauri) {
+        await invoke("student_report_create", { schoolId: String(user?.school_id || ""), id: String(data.id), report: r });
+      } else {
+        await createStudentReport(String(user?.school_id || ""), String(data.id), r);
+      }
       // Optimistically append new report
       setReports((prev) => [
         ...prev,
@@ -195,18 +215,28 @@ export default function StudentDetailPage() {
 
   const handleUpdateReport = async (at: number, next: Report) => {
     if (!data) return;
-    await invoke("student_report_update", { id: String(data.id), at, report: next });
+    const isTauri = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__;
+    if (isTauri) {
+      await invoke("student_report_update", { schoolId: String(user?.school_id || ""), id: String(data.id), at, report: next });
+    } else {
+      await updateStudentReport(String(user?.school_id || ""), String(data.id), at, next);
+    }
     setReports(r => r.map(x => (x.at === at ? next : x)));
   };
 
   const handleDeleteReport = async (at: number) => {
     if (!data) return;
-    await invoke("student_report_delete", { id: String(data.id), at });
+    const isTauri = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__;
+    if (isTauri) {
+      await invoke("student_report_delete", { schoolId: String(user?.school_id || ""), id: String(data.id), at });
+    } else {
+      await deleteStudentReport(String(user?.school_id || ""), String(data.id), at);
+    }
     setReports(r => r.filter(x => x.at !== at));
   };
 
   return (
-    <div className="px-6 py-5 text-white w-full">
+    <div data-student-detail className="w-full px-3 py-4 text-white sm:px-6 sm:py-5">
       {/* HEADER */}
       <div className="relative rounded-lg shadow-lg bg-[url(/images/bg2.jpg)] bg-cover bg-center overflow-hidden">
         <div className="absolute top-3 right-3 z-10">
@@ -234,8 +264,8 @@ export default function StudentDetailPage() {
           {/* Left column: nombre + badges en la misma línea, carrera debajo */}
           <div className="flex-1 pl-6 sm:pl-6 flex items-start">
             <div className="flex flex-col justify-start mt-2 w-full">
-              <div className="flex items-center justify-start gap-4">
-                <h1 className="text-2xl font-semibold text-left">
+                <div className="flex flex-wrap items-center justify-start gap-2 sm:gap-4">
+                <h1 className="max-w-full break-words text-xl font-semibold text-left sm:text-2xl">
                   {data?.name || (err ? "Error" : loading ? "Cargando…" : "Desconocido")}
                 </h1>
 
@@ -257,7 +287,7 @@ export default function StudentDetailPage() {
       </div>
 
       {/* Layout */}
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[minmax(520px,1fr)_minmax(380px,480px)] gap-4 items-start">
+      <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:mt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)]">
         <div className="flex flex-col gap-4">
           <StudentLogsPanel
             logs={data?.logs || []}

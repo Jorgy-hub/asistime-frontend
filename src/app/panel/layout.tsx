@@ -3,15 +3,17 @@ import { useAuth } from "@/context/AuthProvider";
 import { useEffect, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "@/components/sidebar/sidebar";
+import { useTheme } from "@/context/ThemeProvider";
 
 export default function PanelLayout({ children }: { children: React.ReactNode }) {
-  const { token, user } = useAuth();
+  const { token, user, hydrated } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
-    if (!token) router.replace("/login");
-  }, [token, router]);
+    if (hydrated && !token) router.replace("/login");
+  }, [hydrated, token, router]);
 
   const title = useMemo(() => {
     if (pathname === "/panel") return "Home";
@@ -37,17 +39,17 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
     return "User";
   }, [user]);
 
-  if (!token) return null;
+  if (!hydrated || !token) return null;
 
   return (
-    <div className="flex h-screen">
+    <div data-panel-shell className="flex h-screen">
       <Sidebar admin={!!user?.admin} />
       <div className="flex flex-col flex-1 bg-zinc-950 overflow-hidden">
         <div className="flex flex-col flex-1 bg-zinc-900 overflow-hidden">
           <div className="px-8 pt-6 pb-4 border-b border-zinc-700 flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-white tracking-wide">{title}</h1>
-              <nav className="flex items-center gap-1 text-xs mt-1">
+              <h1 className="text-xl font-semibold tracking-wide text-white">{title}</h1>
+              <nav className="mt-1 flex max-w-[55vw] items-center gap-1 overflow-x-auto whitespace-nowrap text-xs no-scrollbar">
                 <button
                   onClick={() => router.push("/panel")}
                   className="text-zinc-400 hover:text-amber-400 transition-colors"
@@ -78,7 +80,16 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="flex flex-col items-end">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label={theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+                title={theme === "dark" ? "Tema claro" : "Tema oscuro"}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 transition hover:bg-zinc-800 hover:text-amber-400"
+              >
+                {theme === "dark" ? "☀" : "☾"}
+              </button>
+              <div className="hidden flex-col items-end sm:flex">
                 <span className="text-sm font-medium text-white">
                   {user?.username || "User"}
                 </span>
@@ -87,7 +98,7 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
                 </span>
               </div>
               <div
-                className="w-10 h-10 rounded-full bg-amber-400 flex items-center justify-center text-white"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-400 text-white sm:h-10 sm:w-10"
                 aria-label="User menu"
               >
                 <svg
@@ -108,7 +119,7 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto p-0 sm:p-4 bg-gradient-to-b from-zinc-800 to-zinc-800/50">
+          <div data-panel-content className="flex-1 overflow-auto p-0 sm:p-4 bg-gradient-to-b from-zinc-800 to-zinc-800/50">
             {children}
           </div>
         </div>
